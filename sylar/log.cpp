@@ -1,4 +1,10 @@
+
 #include "log.h"
+#include <map>
+#include <iostream>
+#include <functional>
+#include <time.h>
+#include <string.h>
 
 namespace sylar{
 
@@ -25,16 +31,136 @@ const char* LogLevel::ToString(LogLevel::Level level){
     return "UNKNOW";
 }
 
+LogLevel::Level LogLevel::FromString(const std::string &str) {
+#define XX(level, v) \
+    if(str == #v) {  \
+        return LogLevel::level; \
+    }
+    XX(DEBUG, debug);
+    XX(INFO, info);
+    XX(WARN, warn);
+    XX(ERROR, error);
+    XX(FATAL, fatal);
 
-Logger(const std::string& name )
+    XX(DEBUG, DEBUG);
+    XX(INFO, INFO);
+    XX(WARN, WARN);
+    XX(ERROR, ERROR);
+    XX(FATAL, FATAL);
+    return LogLevel::UNKNOW;
+#undef XX
+}
+
+class MessageFormatItem : public LogFormatter::FormatItem {
+public:
+    MessageFormatItem(const std::string& str = ""){}
+    void format(std::ostream &os, Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override {
+        os << event->getContent();
+    }
+};
+
+class LevelFormatItem : public LogFormatter::FormatItem {
+public:
+    LevelFormatItem(const std::string& str = ""){}
+    void format(std::ostream &os, Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override {
+        os << LogLevel::ToString(level);
+    }
+};
+
+class ElapseFormatItem : public LogFormatter::FormatItem {
+public:
+    ElapseFormatItem(const std::string& str = ""){}
+    void format(std::ostream &os, Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override {
+        os << event->getElapse();
+    }
+};
+
+class NameFormatItem : public LogFormatter::FormatItem {
+public:
+    NameFormatItem(const std::string& str = ""){}
+    void format(std::ostream &os, Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override {
+        os << event->getLogger()->getName();
+    }
+};
+
+class ThreadIdFormatItem : public LogFormatter::FormatItem {
+public:
+    ThreadIdFormatItem(const std::string& str = ""){}
+    void format(std::ostream &os, Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override {
+        os << event->getThreadId();
+    }
+};
+
+class FiberIdFormatItem : public LogFormatter::FormatItem {
+public:
+    FiberIdFormatItem(const std::string& str = ""){}
+    void format(std::ostream &os, Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override {
+        os << event->getFiberId();
+    }
+};
+
+class DateTimeFormatItem : public LogFormatter::FormatItem {
+public:
+    DateTimeFormatItem(const std::string& format = "%Y:%m:%d %H:%M:%S")
+            :m_format(format) {
+    }
+
+    void format(std::ostream &os, Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override {
+        os << event->getTime();
+    }
+private:
+    std::string m_format;
+};
+
+class FileNameFormatItem : public LogFormatter::FormatItem {
+public:
+    FileNameFormatItem(const std::string& str = ""){}
+    void format(std::ostream &os, Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override {
+        os << event->getFile();
+    }
+};
+
+class LineFormatItem : public LogFormatter::FormatItem {
+public:
+    LineFormatItem(const std::string& str = ""){}
+    void format(std::ostream &os, Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override {
+        os << event->getLine();
+    }
+};
+
+class NewLineFormatItem : public LogFormatter::FormatItem {
+public:
+    NewLineFormatItem(const std::string& str = ""){}
+    void format(std::ostream& os, Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override {
+        os << std::endl;
+    }
+};
+
+class TabFormatItem : public LogFormatter::FormatItem {
+public:
+    TabFormatItem(const std::string& str = ""){}
+    void format(std::ostream& os, Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override {
+        os << "\t";
+    }
+};
+
+class ThreadNameFormatItem : public LogFormatter::FormatItem {
+public:
+    ThreadNameFormatItem(const std::string& str = ""){}
+    void format(std::ostream& os, Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override {
+        os << event->getThreadname();
+    }
+};
+
+Logger::Logger(const std::string& name)
     : m_name(name){
 
 }
 
-void addAppender(LogApperender::ptr appender){
+void Logger::addAppender(LogAppender::ptr appender){
     m_appenders.push_back(appender);
 }
-void delAppender(LogApperender::ptr appender){
+void Logger::delAppender(LogAppender::ptr appender){
     for(auto it = m_appenders.begin(); it != m_appenders.end(); ++it){
         if(*it == appender){
             m_appenders.erase(it);
@@ -42,37 +168,39 @@ void delAppender(LogApperender::ptr appender){
         }
     }
 }
-void Logger::log(LogLevel::Level level, const LogEvent::ptr event){
+
+void Logger::log(LogLevel::Level level,  LogEvent::ptr event){
     if(level >= m_level){
         for(auto& i : m_appenders){
-            i->log(level, event);
+            i->log(logger, level, event);
         }
     }
 }
+
 void Logger::debug(LogEvent::ptr event){
-    debug(LogLevel::DEBUG, event);
+    log(LogLevel::DEBUG, event);
 }
 void Logger::info(LogEvent::ptr event){
-    debug(LogLevel::INFO, event);
+    log(LogLevel::INFO, event);
 }
 void Logger::warn(LogEvent::ptr event){
-    debug(LogLevel::WARN, event);
+    log(LogLevel::WARN, event);
 }
 void Logger::error(LogEvent::ptr event){
-    debug(LogLevel::ERROR, event);
+    log(LogLevel::ERROR, event);
 }
 void Logger::fatal(LogEvent::ptr event){
-    debug(LogLevel::FATAL, event);
+    log(LogLevel::FATAL, event);
     }
 
 FileLogAppender::FileLogAppender(const std::string& filename)
     :m_filename(filename) {
-
+    reopen();
 }
 
-void FileLogAppender::log(LogLevel::Level level, LogEvent::ptr event){
+void FileLogAppender::log(std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::ptr event){
     if(level >= m_level){
-        m_filestream << m_formatter.format(event);
+        m_filestream << m_formatter->format(logger, level, event);
     }
 }
 
@@ -84,9 +212,10 @@ bool FileLogAppender::reopen(){
     return !!m_filestream;   // !!表示 非0值转为1 , 0值还是0
 }
 
-void StdoutLogAppender::log(LogLevel::Level level, LogEvent::ptr event){
+void StdoutLogAppender::log(std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::ptr event){
     if(level >= m_level){
-        std::cout << m_formatter.format(event);
+        std::cout << "hello";
+        std::cout << m_formatter->format(logger, level, event);
     }
 }
 
@@ -94,11 +223,17 @@ LogFormatter::LogFormatter(const std::string& pattern)
     : m_pattern(pattern) {
 
 }
-
-std::string::LogFormatter::format(LogEvent::ptr event){
+/**
+ *
+ * @param logger
+ * @param level
+ * @param event
+ * @return
+ */
+std::string LogFormatter::format(std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::ptr event){
     std::stringstream ss;
     for(auto& i : m_items){
-        i->format(ss, event);
+        i->format(ss, logger, level, event);
     }
     return ss.str();
 }
@@ -115,14 +250,15 @@ std::string::LogFormatter::format(LogEvent::ptr event){
  *    遇到 %m：无参数，解析为 ("m", "", 1)。
  *    遇到 %n：无参数，解析为 ("n", "", 1)。
  */
-LogFormatter::init(){
+void LogFormatter::init() {
+
     // 1.定义容器与变量
     //每个元素是一个三元组：(字符串, 格式化参数, 类型) // str, format, type
     std::vector<std::tuple<std::string, std::string, int>> vec;  //vec储存解析结果
     std::string nstr;  //临时存储普通字符串
 
     // 2.遍历格式化模式 m_pattern
-    for(size_t i = 0; i < m_pattern.size(); ++i) {
+    for (size_t i = 0; i < m_pattern.size(); ++i) {
         // 如果字符不是 % ，将其追加到 nstr 中
         if (m_pattern[i] != '%') {
             nstr.append(1, m_pattern[i]);
@@ -199,23 +335,35 @@ LogFormatter::init(){
     }
 
     //如果有剩余的普通字符串 存储到 vec 中
-    if(!nstr.empty()){
+    if (!nstr.empty()) {
         vec.push_back(std::make_tuple(nstr, "", 0));
     }
-
     //定义格式化项对应的创建函数映射表
     static std::map<std::string, std::function<FormatItem::ptr(const std::string& str)>> s_format_items = {
 #define XX(str, C) \
-    {#str, [](const std::string& fmt){ return FormatItem::ptr(new C(fmt));}}
+{#str, [](const std::string& fmt){ return FormatItem::ptr(new C(fmt));}}
 
-            //定义各种格式化标记及其对应的处理类
-            
-
+//定义各种格式化标记及其对应的处理类
+XX(m, MessageFormatItem),   // %m -- 消息体
+XX(p, LevelFormatItem),     // %p -- level
+XX(r, ElapseFormatItem),    // %r -- 启动后的时间
+XX(c, NameFormatItem),      // %c -- 日志名称
+XX(t, ThreadIdFormatItem),  // %t -- 线程id
+XX(n, NewLineFormatItem),   // %n -- 换行回车
+XX(d, DateTimeFormatItem),  // %d -- 时间
+XX(f, FileNameFormatItem),  // %f -- 文件名
+XX(l, LineFormatItem),      // %l -- 行号
+XX(T, TabFormatItem),       // T  -- Tab
+XX(F, FiberIdFormatItem),   // F  -- 协程ID
+XX(N, ThreadNameFormatItem),// N -- 线程名称
+#undef XX
     };
-
-
-
 }
+
+
+
+
+
 
 
 

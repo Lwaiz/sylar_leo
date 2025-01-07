@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 project(sylar)
 include (cmake/utils.cmake)
+set(CMAKE_C_COMPILER /usr/bin/gcc)  # 替换为实际的 gcc 路径
+set(CMAKE_CXX_COMPILER /usr/bin/g++)  # 替换为实际的 g++ 路径
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -fPIC -ggdb -std=c++11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations")
 set(CMAKE_C_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -fPIC -ggdb -std=c11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations")
