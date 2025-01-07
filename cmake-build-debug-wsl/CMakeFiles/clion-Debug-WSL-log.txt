@@ -1,4 +1,0 @@
-/usr/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "Unix Makefiles" -S /home/leo/CppProgram/sylar -B /home/leo/CppProgram/sylar/cmake-build-debug-wsl
--- Configuring done
--- Generating done
--- Build files have been written to: /home/leo/CppProgram/sylar/cmake-build-debug-wsl
