@@ -136,6 +136,17 @@ public:
     }
 };
 
+class StringFormatItem : public LogFormatter::FormatItem{
+public:
+    StringFormatItem(const std::string& str)
+        :m_string(str) {}
+    void format(std::ostream & os, Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override{
+        os << m_string;
+    }
+private:
+    std::string m_string;
+};
+
 class TabFormatItem : public LogFormatter::FormatItem {
 public:
     TabFormatItem(const std::string& str = ""){}
@@ -239,8 +250,10 @@ std::string LogFormatter::format(std::shared_ptr<Logger> logger, LogLevel::Level
 }
 
 
-//解析日志格式化字符串模式（m_pattern）并将解析结果存储到一个向量vec中
 
+/**
+ * @brief  解析日志格式化字符串模式（m_pattern）并将解析结果存储到一个vec中
+ */
 /* 举例："%d{%Y-%m-%d %H:%M:%S} [%p] %c: %m%n"
  *  %d 表示日期时间，%p 表示日志级别，%c 表示日志名称，%m 表示消息内容，%n 表示换行符
  *    遇到 %d：检测到 {%Y-%m-%d %H:%M:%S} 为参数，解析为 ("d", "{%Y-%m-%d %H:%M:%S}", 1)。
@@ -252,19 +265,19 @@ std::string LogFormatter::format(std::shared_ptr<Logger> logger, LogLevel::Level
  */
 void LogFormatter::init() {
 
-    // 1.定义容器与变量
-    //每个元素是一个三元组：(字符串, 格式化参数, 类型) // str, format, type
+    /** 1.初始化 定义容器与变量 */
+    //每个元素是一个三元组：(字符串, 格式化参数, 类型) // (str, format, type)
     std::vector<std::tuple<std::string, std::string, int>> vec;  //vec储存解析结果
     std::string nstr;  //临时存储普通字符串
 
-    // 2.遍历格式化模式 m_pattern
+    /** 2.遍历格式化模式 m_pattern */
     for (size_t i = 0; i < m_pattern.size(); ++i) {
-        // 如果字符不是 % ，将其追加到 nstr 中
+        // 处理普通字符  如果字符不是 % ，将其追加到 nstr 中
         if (m_pattern[i] != '%') {
             nstr.append(1, m_pattern[i]);
             continue;
         }
-        //处理 '%%' 即转义字符
+        //处理转义字符  '%%'
         if ((i + 1) < m_pattern.size()) {
             if (m_pattern[i + 1] == '%') {
                 nstr.append(1, '%');  //将 '%' 添加到普通字符串
@@ -273,10 +286,11 @@ void LogFormatter::init() {
             }
         }
 
-        // 3.格式化解析字符串部分
+        /** 3.格式化解析字符串部分 */
         //当检测到字符是 % ，开始尝试解析格式化内容
         size_t n = i + 1;       //当前解析位置
-        int fmt_status = 0;     //解析状态机 0 初始状态， 1 正在解析键名， 2 完成解析
+        // 解析状态机 用于区分键名解析和格式内容解析
+        int fmt_status = 0;     // 0 初始状态， 1 正在解析键名， 2 完成解析
         size_t fmt_begin = 0;   //记录格式开始位置
 
         std::string str;   //存储格式化键名
@@ -316,7 +330,7 @@ void LogFormatter::init() {
             }
         }
 
-        //根据解析结果更新 vec
+        /** 4.根据解析结果更新 vec */
         if (fmt_status == 0) {
             if (!nstr.empty()) {
                 //如果有普通字符串未处理， 则先存储
@@ -333,37 +347,59 @@ void LogFormatter::init() {
             vec.push_back(std::make_tuple("<<pattern_error>>", fmt, 0));
         }
     }
-
+    /** 5.处理剩余普通字符串 */
     //如果有剩余的普通字符串 存储到 vec 中
     if (!nstr.empty()) {
         vec.push_back(std::make_tuple(nstr, "", 0));
     }
+    /** 6.格式化项创建函数映射 */
     //定义格式化项对应的创建函数映射表
+    //s_format_items 是一个字典，存储了各个格式化标记及其对应的处理类构造函数
     static std::map<std::string, std::function<FormatItem::ptr(const std::string& str)>> s_format_items = {
+ /**
+  * @brief  宏 XX 用于定义一种映射关系，格式化标记和对应的处理类之间的映射。
+  * @param[in]  str:格式化标记， C:处理类
+  * @return 使用Lambda表达式创建一个FormatItem对象
+  */
 #define XX(str, C) \
-{#str, [](const std::string& fmt){ return FormatItem::ptr(new C(fmt));}}
+        {#str, [](const std::string& fmt){ return FormatItem::ptr(new C(fmt));}}
 
-//定义各种格式化标记及其对应的处理类
-XX(m, MessageFormatItem),   // %m -- 消息体
-XX(p, LevelFormatItem),     // %p -- level
-XX(r, ElapseFormatItem),    // %r -- 启动后的时间
-XX(c, NameFormatItem),      // %c -- 日志名称
-XX(t, ThreadIdFormatItem),  // %t -- 线程id
-XX(n, NewLineFormatItem),   // %n -- 换行回车
-XX(d, DateTimeFormatItem),  // %d -- 时间
-XX(f, FileNameFormatItem),  // %f -- 文件名
-XX(l, LineFormatItem),      // %l -- 行号
-XX(T, TabFormatItem),       // T  -- Tab
-XX(F, FiberIdFormatItem),   // F  -- 协程ID
-XX(N, ThreadNameFormatItem),// N -- 线程名称
+        //定义各种格式化标记及其对应的处理类
+        XX(m, MessageFormatItem),   // %m -- 消息体
+        XX(p, LevelFormatItem),     // %p -- level
+        XX(r, ElapseFormatItem),    // %r -- 启动后的时间
+        XX(c, NameFormatItem),      // %c -- 日志名称
+        XX(t, ThreadIdFormatItem),  // %t -- 线程id
+        XX(n, NewLineFormatItem),   // %n -- 换行回车
+        XX(d, DateTimeFormatItem),  // %d -- 时间
+        XX(f, FileNameFormatItem),  // %f -- 文件名
+        XX(l, LineFormatItem),      // %l -- 行号
+        XX(T, TabFormatItem),       // T  -- Tab
+        XX(F, FiberIdFormatItem),   // F  -- 协程ID
+        XX(N, ThreadNameFormatItem),// N -- 线程名称
 #undef XX
     };
+    /** 7.遍历 vec 生成格式化项 */
+    //遍历 vec 容器，里面包含多个tuple (str, format, type)
+    //get<0>(i) 获取第i个tuple中的第一个元素 -- 键名  %m、%p等
+    //get<1>(i) 获取第i个tuple中的第二个元素 -- 格式化参数  如 %d，表示日期
+    //get<2>(i) 获取第i个tuple中的第三个元素 -- 类型
+    for(auto& i : vec){
+        if(std::get<2>(i) == 0){
+            m_items.push_back(FormatItem::ptr(new StringFormatItem(std::get<0>(i))));
+        }
+        else{
+            auto it = s_format_items.find(std::get<0>(i));
+            if(it == s_format_items.end()){
+                m_items.push_back(FormatItem::ptr(new StringFormatItem("<<error_format %" + std::get<0>(i) + ">>")));
+                m_error = true;
+            }
+            else{
+                m_items.push_back(it->second(std::get<1>(i)));
+            }
+        }
+    }
 }
-
-
-
-
-
 
 
 

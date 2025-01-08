@@ -46,7 +46,7 @@ public:
     /**
      * @brief 将文本转换成日志级别
      * @param[in] str 日志级别文本
-     * @example 输入 "DEBUG" 时返回 LogLevel::DEBUG
+     * @example 输入 "DEBUG" 或 "debug" 时 返回 LogLevel::DEBUG
      */
      static LogLevel::Level FromString(const std::string& str);
 };
@@ -135,14 +135,17 @@ public:
      */
     void init();
 private:
+    ///日志格式模板
     std::string m_pattern;
+    ///日志格式解析后格式
     std::vector<FormatItem::ptr> m_items;
-
-
+    ///是否有错误标志
+    bool m_error = false;
 };
 
-
-//日志输出地: 控制台/文件
+/**
+ * @brief  日志输出目标: 控制台 / 文件
+ */
 class LogAppender{
 public:
     typedef std::shared_ptr<LogAppender> ptr;
