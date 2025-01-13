@@ -99,14 +99,34 @@ public:
     }
 };
 
+/**
+ * @brief 将日志事件的时间戳格式化为指定的时间字符串，并输出到日志流
+ */
 class DateTimeFormatItem : public LogFormatter::FormatItem {
 public:
+    ///m_format 存储时间格式字符串
     DateTimeFormatItem(const std::string& format = "%Y:%m:%d %H:%M:%S")
             :m_format(format) {
+        ///如果传入的 format 为空，则设置默认值
+        if(m_format.empty()){
+            m_format = "%Y-%m-%d %H:%M:%S";
+        }
     }
-
+    /**
+     * @brief 输出格式化时间字符串
+     */
     void format(std::ostream &os, Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override {
-        os << event->getTime();
+        ///创建 tm 结构体 用于存储本地时间
+        struct tm tm;
+        /// 从 LogEvent 对象中获取日志事件时间戳
+        time_t time = event->getTime();
+        ///将 time_t 转换为本地时间 tm 结构
+        localtime_r(&time, &tm);
+        ///用于存储格式化后的时间字符串
+        char buf[64];
+        ///strftime标准库函数 将 tm 结构按指定的 m_format 格式化为字符串 结果保存在 buf 中
+        strftime(buf, sizeof(buf), m_format.c_str(), &tm);
+        os << buf;
     }
 private:
     std::string m_format;
@@ -159,13 +179,52 @@ class ThreadNameFormatItem : public LogFormatter::FormatItem {
 public:
     ThreadNameFormatItem(const std::string& str = ""){}
     void format(std::ostream& os, Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override {
-        os << event->getThreadname();
+        os << event->getThreadName();
     }
 };
 
-Logger::Logger(const std::string& name)
-    : m_name(name){
+/// 初始化：成员初始化列表
+LogEvent::LogEvent(std::shared_ptr<Logger> logger, LogLevel::Level level,
+                   const char* file, int32_t line, uint32_t elapse,
+                   uint32_t thread_id, uint32_t fiber_id, uint64_t time,
+                   const std::string& thread_name)
+    :m_file(file),
+     m_line(line),
+     m_elapse(elapse),
+     m_threadId(thread_id),
+     m_fiberId(fiber_id),
+     m_threadName(thread_name),
+     m_logger(logger),
+     m_level(level){
 
+}
+
+
+Logger::Logger(const std::string& name)
+    : m_name(name)
+    ,m_level(LogLevel::DEBUG){
+    m_formatter.reset(new LogFormatter("%d{%Y-%m-%d %H:%M:%S}%T%t%T%N%T%F%T[%p]%T[%c]%T%f:%l%T%m%n"));
+}
+
+void Logger::setFormatter(LogFormatter::ptr val) {
+    m_formatter = val;
+    for(auto& i : m_appenders){
+        if(!i->m_hasFormatter){
+            i->m_formatter = m_formatter;
+        }
+    }
+}
+
+void Logger::setFormatter(const std::string& val){
+    std::cout << "---" << val << std::endl;
+    sylar::LogFormatter::ptr new_val(new sylar::LogFormatter(val));
+    if(new_val->isError()){
+        std::cout << "Logger setFormatter name=" << m_name
+                  << " value=" << val << " invalid formatter"
+                  << std::endl;
+        return;
+    }
+    setFormatter(new_val);
 }
 
 void Logger::addAppender(LogAppender::ptr appender){
@@ -230,41 +289,48 @@ void StdoutLogAppender::log(std::shared_ptr<Logger> logger, LogLevel::Level leve
     }
 }
 
+
+
+/// 格式类 实现
+
 LogFormatter::LogFormatter(const std::string& pattern)
     : m_pattern(pattern) {
-
+    init();
 }
-/**
- *
- * @param logger
- * @param level
- * @param event
- * @return
- */
+
+
 std::string LogFormatter::format(std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::ptr event){
     std::stringstream ss;
+    ///依次遍历 m_items（模板中各个解析出来的格式化项），调用它们的
+    /// format 方法，将格式化内容写入到字符串流 ss 中
     for(auto& i : m_items){
         i->format(ss, logger, level, event);
     }
     return ss.str();
 }
 
-
+std::ostream& LogFormatter::format(std::ostream& ofs, std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::ptr event){
+    ///直接将格式化后的日志写入到输出流 ofs 中
+    /// 目标流可以是 标准输出流、文件流
+    for(auto& i : m_items){
+        i->format(ofs, logger, level, event);
+    }
+    return ofs;
+}
 
 /**
- * @brief  解析日志格式化字符串模式（m_pattern）并将解析结果存储到一个vec中
- */
-/* 举例："%d{%Y-%m-%d %H:%M:%S} [%p] %c: %m%n"
- *  %d 表示日期时间，%p 表示日志级别，%c 表示日志名称，%m 表示消息内容，%n 表示换行符
- *    遇到 %d：检测到 {%Y-%m-%d %H:%M:%S} 为参数，解析为 ("d", "{%Y-%m-%d %H:%M:%S}", 1)。
- *    遇到 [: 普通字符，解析为 ("[", "", 0)。
- *    遇到 %p：无参数，解析为 ("p", "", 1)。
- *    遇到 %c：无参数，解析为 ("c", "", 1)。
- *    遇到 %m：无参数，解析为 ("m", "", 1)。
- *    遇到 %n：无参数，解析为 ("n", "", 1)。
+ * @brief  init()初始化函数
+ *     解析日志格式化字符串模式（m_pattern）并将解析结果存储到一个vec中
+ * @example 举例："%d{%Y-%m-%d %H:%M:%S} [%p] %c: %m%n"
+ *      %d 表示日期时间，%p 表示日志级别，%c 表示日志名称，%m 表示消息内容，%n 表示换行符
+ *      遇到 %d：检测到 {%Y-%m-%d %H:%M:%S} 为参数，解析为 ("d", "{%Y-%m-%d %H:%M:%S}", 1)。
+ *      遇到 [: 普通字符，解析为 ("[", "", 0)。
+ *      遇到 %p：无参数，解析为 ("p", "", 1)。
+ *      遇到 %c：无参数，解析为 ("c", "", 1)。
+ *      遇到 %m：无参数，解析为 ("m", "", 1)。
+ *      遇到 %n：无参数，解析为 ("n", "", 1)。
  */
 void LogFormatter::init() {
-
     /** 1.初始化 定义容器与变量 */
     //每个元素是一个三元组：(字符串, 格式化参数, 类型) // (str, format, type)
     std::vector<std::tuple<std::string, std::string, int>> vec;  //vec储存解析结果
@@ -383,11 +449,14 @@ void LogFormatter::init() {
     //遍历 vec 容器，里面包含多个tuple (str, format, type)
     //get<0>(i) 获取第i个tuple中的第一个元素 -- 键名  %m、%p等
     //get<1>(i) 获取第i个tuple中的第二个元素 -- 格式化参数  如 %d，表示日期
-    //get<2>(i) 获取第i个tuple中的第三个元素 -- 类型
+    //get<2>(i) 获取第i个tuple中的第三个元素 -- 类型 0：普通字符串，1：格式化项
     for(auto& i : vec){
+        //普通字符串 创建 StringFormatItem 并加入 m_items
         if(std::get<2>(i) == 0){
             m_items.push_back(FormatItem::ptr(new StringFormatItem(std::get<0>(i))));
         }
+        //格式化项 查找对应处理类 并创建 加入 m_items
+        //找不到对应处理类 标记错误
         else{
             auto it = s_format_items.find(std::get<0>(i));
             if(it == s_format_items.end()){
