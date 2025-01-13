@@ -283,7 +283,7 @@ public:
     /**
      * @brief 将日志输出目标配置转换成 YAML String
      */
-    virtual std::string toYamlString() = 0;
+    //virtual std::string toYamlString() = 0;
     /**
      * @brief 更改日志格式器
      */
@@ -312,12 +312,14 @@ protected:
 };
 
 
-//日志器
+/**
+ * @brief  日志器
+ */
 class Logger : public std::enable_shared_from_this<Logger>{
-    friend class LoggerManager;
+    //friend class LoggerManager;
 public:
     typedef std::shared_ptr<Logger> ptr;
-    //typedef Spinlock MutecType;
+    //typedef Spinlock MutexType;
 
     /**
      * @brief 构造函数
@@ -328,7 +330,7 @@ public:
     /**
      * @brief 写日志
      */
-    void log(LogLevel::Level level, const LogEvent::ptr event);
+    void log(LogLevel::Level level, LogEvent::ptr event);
 
     /**
      * @brief 写 各 级日志
@@ -392,7 +394,7 @@ public:
     /**
      * @brief 将日志器的配置转换成 YAML String
      */
-    std::string toYamlString();
+    //std::string toYamlString();
 
 private:
     /// 日志名称
@@ -414,6 +416,7 @@ class StdoutLogAppender : public LogAppender{
 public:
     typedef std::shared_ptr<StdoutLogAppender> ptr;
     void log(Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override;
+    ///std::string toYamlString() override;
 private:
 
 };

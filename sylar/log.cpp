@@ -105,7 +105,7 @@ public:
 class DateTimeFormatItem : public LogFormatter::FormatItem {
 public:
     ///m_format 存储时间格式字符串
-    DateTimeFormatItem(const std::string& format = "%Y:%m:%d %H:%M:%S")
+    DateTimeFormatItem(const std::string& format = "%Y-%m-%d %H:%M:%S")
             :m_format(format) {
         ///如果传入的 format 为空，则设置默认值
         if(m_format.empty()){
@@ -193,6 +193,7 @@ LogEvent::LogEvent(std::shared_ptr<Logger> logger, LogLevel::Level level,
      m_elapse(elapse),
      m_threadId(thread_id),
      m_fiberId(fiber_id),
+     m_time(time),
      m_threadName(thread_name),
      m_logger(logger),
      m_level(level){
@@ -201,9 +202,9 @@ LogEvent::LogEvent(std::shared_ptr<Logger> logger, LogLevel::Level level,
 
 
 Logger::Logger(const std::string& name)
-    : m_name(name)
+    :m_name(name)
     ,m_level(LogLevel::DEBUG){
-    m_formatter.reset(new LogFormatter("%d{%Y-%m-%d %H:%M:%S}%T%t%T%N%T%F%T[%p]%T[%c]%T%f:%l%T%m%n"));
+    m_formatter.reset(new LogFormatter("%d{%Y-%m-%d %H:%M:%S}%T%t%T%N%T%F%T[%p]%T[%c]%T<%f:%l>%T%m%n"));
 }
 
 void Logger::setFormatter(LogFormatter::ptr val) {
@@ -228,6 +229,11 @@ void Logger::setFormatter(const std::string& val){
 }
 
 void Logger::addAppender(LogAppender::ptr appender){
+    ///检查 appender 的格式化器
+    if(!appender->getFormatter()){
+        appender->m_formatter = m_formatter;
+    }
+    ///将 appender 添加到 m_appenders 容器中
     m_appenders.push_back(appender);
 }
 void Logger::delAppender(LogAppender::ptr appender){
@@ -239,10 +245,20 @@ void Logger::delAppender(LogAppender::ptr appender){
     }
 }
 
+void Logger::clearAppenders() {
+    m_appenders.clear();
+}
+
 void Logger::log(LogLevel::Level level,  LogEvent::ptr event){
     if(level >= m_level){
-        for(auto& i : m_appenders){
-            i->log(logger, level, event);
+        auto self = shared_from_this();
+
+        if(!m_appenders.empty()){
+            for(auto& i : m_appenders) {
+                i->log(self, level, event);
+            }
+        } else if(m_root){
+            m_root->log(level, event);
         }
     }
 }
@@ -284,11 +300,10 @@ bool FileLogAppender::reopen(){
 
 void StdoutLogAppender::log(std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::ptr event){
     if(level >= m_level){
-        std::cout << "hello";
-        std::cout << m_formatter->format(logger, level, event);
+        //std::cout << "hello";
+        m_formatter->format(std::cout, logger, level, event);
     }
 }
-
 
 
 /// 格式类 实现
@@ -430,7 +445,7 @@ void LogFormatter::init() {
 #define XX(str, C) \
         {#str, [](const std::string& fmt){ return FormatItem::ptr(new C(fmt));}}
 
-        //定义各种格式化标记及其对应的处理类
+        //定义各种格式化标记及其对应的处理类  "%d{%Y-%m-%d %H:%M:%S}%T%t%T%N%T%F%T[%p]%T[%c]%T%f:%l%T%m%n"
         XX(m, MessageFormatItem),   // %m -- 消息体
         XX(p, LevelFormatItem),     // %p -- level
         XX(r, ElapseFormatItem),    // %r -- 启动后的时间
