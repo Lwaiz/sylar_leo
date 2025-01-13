@@ -1,3 +1,2 @@
 # Ignore build directories
 cmake-build-debug-wsl/
-Doxyfile
