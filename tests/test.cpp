@@ -11,9 +11,14 @@ int main(int argc,char** argv){
     //创建标准输出日志目标 并 添加到日志器中
     logger->addAppender(sylar::LogAppender::ptr(new sylar::StdoutLogAppender));
 
-//    //配置日志格式器
-//    sylar::LogFormatter::ptr formatter(new sylar::LogFormatter("%d{%Y-%m-%d %H:%M:%S} [%p] %m (%f:%l)"));
-//    appender->setFormatter(formatter);
+    sylar::FileLogAppender::ptr file_appender(new sylar::FileLogAppender("./log.txt"));
+    logger->addAppender(file_appender);
+
+    //配置文件流日志格式器
+    sylar::LogFormatter::ptr fmt(new sylar::LogFormatter("%d{%Y-%m-%d %H:%M:%S} [%p] (%f:%l) %m %n"));
+    file_appender->setFormatter(fmt);
+    file_appender->setLevel(sylar::LogLevel::ERROR);
+    file_appender->setLevel(sylar::LogLevel::INFO);
 
     //创建日志事件
     sylar::LogEvent::ptr event(new sylar::LogEvent(logger,
@@ -33,5 +38,10 @@ int main(int argc,char** argv){
 
     SYLAR_LOG_INFO(logger) << " test macro" ;
     SYLAR_LOG_ERROR(logger) << " test macro error";
+    SYLAR_LOG_FMT_ERROR(logger, "test macro fmt error %s", "aa");
+
+    auto l = sylar::LoggerMgr::GetInstance()->getLogger("xx");
+    SYLAR_LOG_INFO(l) << "xxx";
+
     return 0;
 }

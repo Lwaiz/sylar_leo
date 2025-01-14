@@ -16,6 +16,7 @@
 #include <stdarg.h>
 #include <map>
 #include "util.h"
+#include "singleton.h"
 
 ///宏定义
 
@@ -38,6 +39,27 @@
 #define SYLAR_LOG_WARN(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::WARN)
 #define SYLAR_LOG_ERROR(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::ERROR)
 #define SYLAR_LOG_FATAL(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::FATAL)
+
+/**
+ * @brief 使用 格式化 方式将日志级别 level 的日志写入到 logger
+ */
+#define SYLAR_LOG_FMT_LEVEL(logger, level, fmt, ...) \
+    if(logger->getLevel() <= level)                  \
+        sylar::LogEventWrap(sylar::LogEvent::ptr(new sylar::LogEvent( \
+        logger, level, __FILE__, __LINE__,           \
+        0, sylar::GetThreadId(),                     \
+        sylar::GetFiberId(),                         \
+        time(0),                                     \
+        "main_thread"))).getEvent()->format(fmt, __VA_ARGS__)
+
+/**
+ * @brief 使用 格式化 方式将日志级别 debug，info，warn，error，fatal 的日志写到 logger
+ */
+#define SYLAR_LOG_FMT_DEBUG(logger, fmt, ...) SYLAR_LOG_FMT_LEVEL(logger, sylar::LogLevel::DEBUG, fmt, __VA_ARGS__)
+#define SYLAR_LOG_FMT_INFO(logger, fmt, ...) SYLAR_LOG_FMT_LEVEL(logger, sylar::LogLevel::INFO, fmt, __VA_ARGS__)
+#define SYLAR_LOG_FMT_WARN(logger, fmt, ...) SYLAR_LOG_FMT_LEVEL(logger, sylar::LogLevel::WARN, fmt, __VA_ARGS__)
+#define SYLAR_LOG_FMT_ERROR(logger, fmt, ...) SYLAR_LOG_FMT_LEVEL(logger, sylar::LogLevel::ERROR, fmt, __VA_ARGS__)
+#define SYLAR_LOG_FMT_FATAL(logger, fmt, ...) SYLAR_LOG_FMT_LEVEL(logger, sylar::LogLevel::FATAL, fmt, __VA_ARGS__)
 
 
 namespace sylar {
@@ -494,8 +516,10 @@ private:
     uint64_t m_lastTime = 0;    ///上次重新打开的时间
 };
 
+
 /**
  * @brief 日志器管理类
+ *        负责管理所有的 logger
  */
 class LoggerManager{
 public:
@@ -530,7 +554,7 @@ private:
 };
 
 ///日志管理类单例模式
-//typedef sylar::Singleton<LoggerManager> LoggerMgr;
+typedef sylar::Singleton<LoggerManager> LoggerMgr;
 
 }
 #endif //SYLAR_LOG_H

@@ -523,14 +523,41 @@ void LogFormatter::init() {
 }
 
 
+LoggerManager::LoggerManager() {
+    m_root.reset(new Logger);
+    m_root->addAppender(LogAppender::ptr(new StdoutLogAppender));
+
+    //m_loggers[m_root->m_name] = m_root;
+
+    init();
+}
+
+Logger::ptr LoggerManager::getLogger(const std::string &name) {
+    auto it = m_loggers.find(name);
+    return it == m_loggers.end() ? m_root : it->second;
+//    if(it != m_loggers.end()){
+//        return it->second;
+//    }
+
+//    Logger::ptr logger(new Logger(name));
+//    logger->m_root = m_root;
+//    m_loggers[name] = logger;
+//    return logger;
+}
+
+void LoggerManager::init(){
+
+}
+
+
+
+
+
+
+
+
 
 } // namespace 作用域结束
-
-
-
-
-
-
 
 
 
