@@ -22,11 +22,16 @@
 
 /**
  * @brief 使用流方式将日志级别 level 的日志写到 logger
+ *
+ * 说明：
+ * - 如果 logger 的日志级别大于指定的 level，则不会输出日志。
+ * - 通过 `sylar::LogEventWrap` 创建一个日志事件，并通过流方式将日志信息追加到日志流中。
+ * - 主要目的是为不同日志级别提供统一的日志输出接口。
  */
 #define SYLAR_LOG_LEVEL(logger, level) \
     if(logger->getLevel() <= level)    \
         sylar::LogEventWrap(sylar::LogEvent::ptr(new sylar::LogEvent( \
-                                logger, level, __FILE__, __LINE__, 0,                         \
+                                logger, level, __FILE__, __LINE__, 0,  \
                                 sylar::GetThreadId(),          \
                                 sylar::GetFiberId(),           \
                                 time(0),                       \
@@ -42,6 +47,11 @@
 
 /**
  * @brief 使用 格式化 方式将日志级别 level 的日志写入到 logger
+ *
+ * 说明：
+ * - 如果 logger 的日志级别大于指定的 level，则不会输出日志。
+ * - 通过 `sylar::LogEventWrap` 创建一个日志事件，并调用日志事件的 `format` 方法进行格式化。
+
  */
 #define SYLAR_LOG_FMT_LEVEL(logger, level, fmt, ...) \
     if(logger->getLevel() <= level)                  \
