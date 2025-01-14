@@ -1,15 +1,19 @@
 # Logger模块
 ## LogLevel 类
-定义日志级别，包含 UNKNOW, DEBUG, INFO, WARN, ERROR, FATAL共五个级别 
+**定义日志级别**
+
+包含 UNKNOW, DEBUG, INFO, WARN, ERROR, FATAL共五个级别 
 
 通过 ToString函数 和 FromString函数实现了日志级别和文本的相互转换
 （具体实现使用了宏定义）
 
 ## LogEvent 类
-日志事件类 包含一条日志记录的信息，包含日志时间、线程信息、日志级别、内容、代码位置等内容
+**日志事件类**
+
+包含一条日志记录的信息，包含日志时间、线程信息、日志级别、内容、代码位置等内容
 
 ## LogFormatter 类
-日志格式器
+**日志格式器**
 *  %m 消息
 *  %p 日志级别
 *  %r 累计毫秒数
@@ -23,7 +27,8 @@
 *  %F 协程id
 *  %N 线程名称
 
-默认格式模板 "%d{%Y-%m-%d %H:%M:%S}%T%t%T%N%T%F%T[%p]%T[%c]%T%f:%l%T%m%n"
+**默认格式模板**
+*     "%d{%Y-%m-%d %H:%M:%S}%T%t%T%N%T%F%T[%p]%T[%c]%T%f:%l%T%m%n"
 
 format函数 返回格式化日志文本
 
@@ -42,7 +47,7 @@ format函数 返回格式化日志文本
   * 遇到 %m：无参数，解析为 ("m", "", 1)。
   * 遇到 %n：无参数，解析为 ("n", "", 1)。
 
-**函数具体实现**
+**init 函数具体实现**
 1. 初始化 定义容器与变量
 2. 遍历格式化模式 m_pattern
 3. 格式化解析字符串部分
@@ -50,5 +55,19 @@ format函数 返回格式化日志文本
 5. 处理剩余普通字符串
 6. 格式化项创建函数映射
 7. 遍历 vec 生成格式化项
+
+## LogAppender 类
+**日志输出目标类: 控制台 / 文件**
+
+
+
+### StdOutLogAppender 类
+输出到控制台的Appender
+
+### FileLogAppender 类
+输出到文件的Appender
+
+## Logger 类
+**日志器**
 
 
