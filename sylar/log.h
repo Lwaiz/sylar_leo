@@ -224,16 +224,24 @@ private:
     LogLevel::Level m_level;       //日志级别
 };
 
+/**
+ * @brief 包装日志事件 (LogEvent) 的操作并提供管理其生命周期的功能
+ *     用于简化 LogEvent 对象的使用和管理
+ */
 class LogEventWrap{
 public:
     /**
      * @brief 构造函数
      * @param e  日志事件
+     * @detail 传入一个智能指针 使用成员初始化列表直接赋值 m_event
      */
     LogEventWrap(LogEvent::ptr e);
 
     /**
-     * @brief 析构函数
+     * @brief 析构函数 析构时自动触发日志提交
+     * @function 在 LogEventWrap 对象销毁时，将日志事件提交到关联的 Logger
+     * @detail   1.通过 m_event->getLogger() 获取关联的日志器（Logger）。
+     *           2.调用日志器的 log 方法，将当前日志事件 m_event 按照其级别 m_event->getLevel() 提交
      */
     ~LogEventWrap();
 
@@ -535,29 +543,33 @@ class LoggerManager{
 public:
     /**
      * @brief 构造函数
+     * @details 初始化主日志器 m_root
+     *          将主日志器添加到日志器容器中
+     *          调用 init 函数 加载日志配置
      */
     LoggerManager();
 
     /**
      * @brief 获取日志器
+     *          如果日志器不存在 创建新的日志器并存储到 m_loggers 容器中
      * @param[in] name 日志器名称
      */
     Logger::ptr getLogger(const std::string& name);
 
     /**
-     * @brief 初始化
+     * @brief 初始化日志器管理器
      */
     void init();
 
     /**
      * @brief 返回主日志器
-     * @return
+     *         主日志器通常作为默认日志器处理全局日志输出
      */
     Logger::ptr getRoot() const {return m_root;}
 
 private:
     //MutexType m_mutex;
-    ///日志器容器
+    ///日志器容器  以名称为键
     std::map<std::string, Logger::ptr> m_loggers;
     ///主日志器
     Logger::ptr m_root;
