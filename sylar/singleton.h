@@ -27,13 +27,13 @@ class Singleton {
 public:
     /**
      * @brief 返回单例裸指针
+     *      延迟初始化 只有在第一次调用 GetInstance 时创建实例
      */
     static T* GetInstance(){
-        static T v;
+        static T v;    ///static 确保全局只有一个实例
         return &v;
     }
 };
-
 /**
  * @brief    单例模式 智能指针封装类
  * @tparam T    类型
