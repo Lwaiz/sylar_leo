@@ -15,6 +15,29 @@
 #include <vector>
 #include <stdarg.h>
 #include <map>
+#include "util.h"
+
+///宏定义
+
+/**
+ * @brief 使用流方式将日志级别 level 的日志写到 logger
+ */
+#define SYLAR_LOG_LEVEL(logger, level) \
+    if(logger->getLevel() <= level)    \
+        sylar::LogEventWrap(sylar::LogEvent::ptr(new sylar::LogEvent( \
+                                logger, level, __FILE__, __LINE__, 0,                         \
+                                sylar::GetThreadId(),          \
+                                sylar::GetFiberId(),           \
+                                time(0),                       \
+                                "main_thread"))).getSS()
+/**
+ * @brief 使用流方式将日志级别 debug，info，warn，error，fatal 的日志写到 logger
+ */
+#define SYLAR_LOG_DEBUG(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::DEBUG)
+#define SYLAR_LOG_INFO(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::INFO)
+#define SYLAR_LOG_WARN(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::WARN)
+#define SYLAR_LOG_ERROR(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::ERROR)
+#define SYLAR_LOG_FATAL(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::FATAL)
 
 
 namespace sylar {
@@ -169,9 +192,38 @@ private:
     LogLevel::Level m_level;       //日志级别
 };
 
+class LogEventWrap{
+public:
+    /**
+     * @brief 构造函数
+     * @param e  日志事件
+     */
+    LogEventWrap(LogEvent::ptr e);
+
+    /**
+     * @brief 析构函数
+     */
+    ~LogEventWrap();
+
+    /**
+     * @brief 获取日志事件
+     */
+    LogEvent::ptr getEvent() const {return m_event;}
+
+    /**
+     * @brief 获取日志内容流
+     */
+    std::stringstream& getSS();
+
+private:
+    ///日志事件
+    LogEvent::ptr m_event;
+};
 
 
-/// 日志格式器
+/**
+ * @brief 日志格式器
+ */
 class LogFormatter{
 public:
     typedef std::shared_ptr<LogFormatter> ptr;
@@ -411,33 +463,74 @@ private:
     Logger::ptr m_root;
 };
 
-//输出到控制台的Appender
+
+/**
+ * @brief 输出到控制台的Appender
+ */
 class StdoutLogAppender : public LogAppender{
 public:
     typedef std::shared_ptr<StdoutLogAppender> ptr;
     void log(Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override;
-    ///std::string toYamlString() override;
-private:
-
+    // std::string toYamlString() override;
 };
 
-//输出到文件的Appender
+/**
+ * @brief 输出到文件的Appender
+ */
 class FileLogAppender : public LogAppender{
 public:
     typedef std::shared_ptr<FileLogAppender> ptr;
     FileLogAppender(const std::string& filename);
     void log(Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override;
 
-    //重新打开文件， 文件打开成功返回true
+    /**
+     * @brief 重新打开文件， 文件打开成功返回true
+     * @return 成功返回 true
+     */
     bool reopen();
 private:
-    std::string m_filename;
-    std::ofstream m_filestream;
-
+    std::string m_filename;     /// 文件路径
+    std::ofstream m_filestream; /// 文件流
+    uint64_t m_lastTime = 0;    ///上次重新打开的时间
 };
 
+/**
+ * @brief 日志器管理类
+ */
+class LoggerManager{
+public:
+    /**
+     * @brief 构造函数
+     */
+    LoggerManager();
+
+    /**
+     * @brief 获取日志器
+     * @param[in] name 日志器名称
+     */
+    Logger::ptr getLogger(const std::string& name);
+
+    /**
+     * @brief 初始化
+     */
+    void init();
+
+    /**
+     * @brief 返回主日志器
+     * @return
+     */
+    Logger::ptr getRoot() const {return m_root;}
+
+private:
+    //MutexType m_mutex;
+    ///日志器容器
+    std::map<std::string, Logger::ptr> m_loggers;
+    ///主日志器
+    Logger::ptr m_root;
+};
+
+///日志管理类单例模式
+//typedef sylar::Singleton<LoggerManager> LoggerMgr;
 
 }
-
-
 #endif //SYLAR_LOG_H

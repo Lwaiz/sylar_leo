@@ -13,6 +13,8 @@ set(CMAKE_GENERATOR_PLATFORM x64)
 
 set(LIB_SRC
     sylar/log.cpp
+        sylar/util.cpp
+
         )
 #生成共享库
 add_library(sylar SHARED ${LIB_SRC})

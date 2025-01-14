@@ -51,6 +51,43 @@ LogLevel::Level LogLevel::FromString(const std::string &str) {
 #undef XX
 }
 
+/// LogEvent 的格式化日志输出功能
+/// 接受可变参数的format函数
+void LogEvent::format(const char* fmt, ...){
+    va_list al;               // 定义可变参数列表
+    va_start(al, fmt);        // 初始化可变参数列表
+    format(fmt, al);          // 调用重载方法处理格式化
+    va_end(al);               // 结束可变参数列表
+}
+
+///实际处理字符串格式化的函数
+void LogEvent::format(const char* fmt, va_list al){
+    char* buf = nullptr;  //定义字符指针 用于存储格式化后的字符串
+    // 使用 vasprintf 动态分配缓冲区并格式化字符串
+    int len = vasprintf(&buf, fmt, al);
+
+    //检查格式化是否成功
+    if(len != -1) {
+        //将格式化后的字符串追加到字符串流中
+        m_ss << std::string(buf, len);
+        //释放动态分配缓冲区
+        free(buf);
+    }
+}
+
+LogEventWrap::LogEventWrap(LogEvent::ptr e)
+    :m_event(e){
+}
+
+LogEventWrap::~LogEventWrap(){
+    m_event->getLogger()->log(m_event->getLevel(), m_event);
+}
+
+std::stringstream& LogEventWrap::getSS() {
+    return m_event->getSS();
+}
+
+
 class MessageFormatItem : public LogFormatter::FormatItem {
 public:
     MessageFormatItem(const std::string& str = ""){}
