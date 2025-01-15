@@ -45,6 +45,7 @@ cmake version 3.22.1
 
 ## 架构
 ### 1. 核心类
+![img.png](readme_img/img.png)
 #### LogLevel 类
 **定义日志级别**
 
