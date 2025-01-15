@@ -10,11 +10,15 @@ set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -fPIC -ggdb -std=c++11 -Wall -
 
 set(CMAKE_GENERATOR_PLATFORM x64)
 
+include_directories(.)
+include_directories(/usr/local/include)
+
+link_directories(/usr/local/lib)
 
 set(LIB_SRC
-    sylar/log.cpp
+        sylar/log.cpp
         sylar/util.cpp
-
+        sylar/config.cpp
         )
 #生成共享库
 add_library(sylar SHARED ${LIB_SRC})
@@ -25,6 +29,10 @@ add_executable(test tests/test.cpp)
 add_dependencies(test sylar)
 #force_redefine_file_macro_for_sources(test) #___FILE___
 target_link_libraries(test  sylar)
+
+add_executable(test_config tests/test_config.cpp)
+add_dependencies(test_config sylar)
+target_link_libraries(test_config  sylar yaml-cpp)
 
 #设置输出路径
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
