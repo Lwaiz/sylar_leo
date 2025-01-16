@@ -5,7 +5,6 @@
 **2025.1.6**
 
 Log系统
-- 开始着手这个项目，也是准备的第一个Cpp项目。
 - 学习参考
     - https://github.com/sylar-yin/sylar/tree/master
     - https://blog.csdn.net/qq_35099224/category_12613947.html
