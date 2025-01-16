@@ -24,6 +24,7 @@ Log系统
 
 # 开发环境
 
+```
 wsl2 ---- Ubuntu-22.04
 
 gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0
@@ -31,6 +32,8 @@ gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0
 g++ (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0
 
 cmake version 3.22.1
+```
+
 
 ---
 
