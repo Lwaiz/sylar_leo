@@ -231,5 +231,106 @@ int main() {
 
 ---
 
-## 
+## 功能特性
+- **支持多种类型**：支持常见的基础类型和容器类型（如 `int`, `double`, `std::string`, `std::vector<T>`）。
+- **动态管理**：通过统一的接口动态获取和设置配置参数。
+- **类型安全**：利用模板机制确保类型转换安全。
+- **序列化与反序列化**：提供参数值与 YAML 格式字符串之间的互相转换。
+- **日志支持**：对于异常情况提供详细的日志记录。
+
+## 系统架构
+
+### 核心组件
+
+#### 1. `ConfigVarBase`
+**作用**：配置变量的基类，定义了所有配置项的基本属性和接口。
+- **主要成员变量**：
+  - `m_name`：配置参数的名称。
+  - `m_description`：配置参数的描述。
+- **主要接口**：
+  - `toString()`：将配置参数值序列化为字符串。
+  - `fromString()`：从字符串反序列化为配置参数值。
+
+#### 2. `ConfigVar`
+**作用**：模板类，用于存储具体类型的配置变量，继承自 `ConfigVarBase`。
+- **模板参数**：
+  - `T`：配置参数的类型。
+  - `FromStr`：从字符串转换为 `T` 类型的仿函数。
+  - `ToStr`：从 `T` 类型转换为字符串的仿函数。
+- **主要功能**：
+  - 保存和操作具体类型的配置变量值。
+  - 利用模板特化支持容器类型（如 `std::vector<T>`）。
+
+#### 3. `LexicalCast`
+**作用**：通用的类型转换工具。
+- **主要功能**：
+  - 基本类型之间的转换（如 `int` 转 `std::string`）。
+  - 支持容器类型与 YAML 字符串之间的相互转换。
+- **特化实现**：
+  - `LexicalCast<std::string, std::vector<T>>`：从 YAML 字符串转换为 `std::vector<T>`。
+  - `LexicalCast<std::vector<T>, std::string>`：将 `std::vector<T>` 转换为 YAML 字符串。
+
+#### 4. `Config`
+**作用**：配置管理类，提供全局统一的配置操作接口。
+- **主要成员变量**：
+  - `s_datas`：保存所有配置参数的映射表（键为参数名，值为配置变量指针）。
+- **主要功能**：
+  - 动态查找和创建配置参数。
+  - 从 YAML 文件加载配置。
+
+### 配置加载流程
+1. **定义配置变量**：使用 `Config::Lookup` 接口定义配置项，并设置默认值和描述。
+2. **加载 YAML 文件**：通过 `Config::LoadFromYaml` 接口加载 YAML 格式的配置文件。
+3. **访问配置参数**：通过 `Config::LookupBase` 或特定类型的 `Config::Lookup` 方法访问配置参数。
+4. **动态修改配置参数**：在运行时修改配置值，通过 `toString` 和 `fromString` 实现参数的序列化与反序列化。
+
+### 配置参数生命周期
+1. **创建**：配置参数首次通过 `Config::Lookup` 定义并添加到全局映射表。
+2. **管理**：所有配置项存储于 `Config` 类的 `s_datas` 静态变量中，统一管理。
+3. **销毁**：程序退出时自动释放资源。
+
+## 示例代码
+### 定义配置参数
+```cpp
+#include "config.h"
+
+// 定义一个整型配置变量
+sylar::ConfigVar<int>::ptr g_int_config =
+    sylar::Config::Lookup<int>("system.port", 8080, "Server port");
+
+// 定义一个字符串向量配置变量
+sylar::ConfigVar<std::vector<std::string>>::ptr g_vec_config =
+    sylar::Config::Lookup<std::vector<std::string>>("system.hosts", {"127.0.0.1"}, "Server hosts");
+```
+
+### 加载配置文件
+```cpp
+#include "yaml-cpp/yaml.h"
+#include "config.h"
+
+void LoadConfig() {
+    YAML::Node root = YAML::LoadFile("config.yml");
+    sylar::Config::LoadFromYaml(root);
+}
+```
+
+### 访问配置参数
+```cpp
+int port = g_int_config->getValue();
+std::vector<std::string> hosts = g_vec_config->getValue();
+```
+
+### 动态修改参数
+```cpp
+g_int_config->setValue(9090);
+std::cout << g_int_config->toString() << std::endl;
+```
+
+## 日志与异常处理
+- 在配置加载和类型转换失败时，系统会记录详细的错误日志，便于调试。
+- 配置参数的名称需要符合正则表达式 `[a-z0-9_.]+`，否则会抛出异常。
+
+## 依赖
+- `boost`：用于类型转换。
+- `yaml-cpp`：解析 YAML 配置文件。
 

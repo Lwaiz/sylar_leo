@@ -100,10 +100,13 @@ public:
 template<class T>
 class LexicalCast<std::string, std::vector<T>>{
 public:
+    /// 重载 ()
     std::vector<T> operator()(const std::string& v){
+        /// 利用 YAML::Load 将字符串解析为 YAML::Node
         YAML::Node node = YAML::Load(v);
         typename std::vector<T> vec;
         std::stringstream ss;
+        /// 遍历 YAML::Node 的每一个元素，递归调用转换为目标类型 T 并存入 vec
         for(size_t i = 0; i < node.size(); ++i){
             ss.str("");
             ss << node[i];
@@ -120,16 +123,19 @@ template<class T>
 class LexicalCast<std::vector<T>, std::string>{
 public:
     std::string operator()(const std::vector<T>& v){
+        /// 创建一个 YAML::Node 类型为 Sequence
         YAML::Node node(YAML::NodeType::Sequence);
+        /// 遍历 std::vector<T> 的每一个元素，
+        /// 递归调用转换为字符串，并加入到 YAML::Node 中
         for(auto & i : v) {
             node.push_back(YAML::Load(LexicalCast<T, std::string>()(i)));
         }
+        /// 将 YAML::Node 序列化为字符串返回
         std::stringstream ss;
         ss << node;
         return ss.str();
     }
 };
-
 
 /**
  * @brief 配置参数模板子类，保存对应类型的参数值
@@ -212,6 +218,7 @@ private:
 class Config{
 public:
     typedef std::unordered_map<std::string, ConfigVarBase::ptr> ConfigVarMap;
+
     /**
      * @brief 获取/ 创建 对应参数名的配置参数
      * @tparam T 模板类型
