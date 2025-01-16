@@ -28,7 +28,7 @@ add_library(sylar SHARED ${LIB_SRC})
 add_executable(test tests/test.cpp)
 add_dependencies(test sylar)
 #force_redefine_file_macro_for_sources(test) #___FILE___
-target_link_libraries(test  sylar)
+target_link_libraries(test  sylar yaml-cpp)
 
 add_executable(test_config tests/test_config.cpp)
 add_dependencies(test_config sylar)
