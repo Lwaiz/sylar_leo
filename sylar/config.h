@@ -15,7 +15,7 @@
 #include <memory>
 #include <sstream>
 #include <boost/lexical_cast.hpp>
-//#include <yaml-cpp/yaml.h>
+#include <yaml-cpp/yaml.h>
 #include <vector>
 #include <list>
 #include <map>
@@ -29,20 +29,21 @@
 namespace sylar{
 
 /**
- * @brief 配置变量的基类
+ * @brief 配置变量 基类
  */
 class ConfigVarBase{
 public:
     typedef std::shared_ptr<ConfigVarBase> ptr;
 
     /**
-     * @brief 构造函数
+     * @brief 构造函数  初始化配置参数的名称和描述
      * @param name 配置参数名称 [0-9 a-z _ .]
      * @param description   配置参数描述
      */
     ConfigVarBase(const std::string& name, const std::string& description = "")
         :m_name(name),
         m_description(description){
+        std::transform(m_name.begin(), m_name.end(),m_name.begin(), ::tolower);
     }
     /**
      * @brief 虚析构函数
@@ -60,12 +61,12 @@ public:
     const std::string& getDescription() const {return m_description;}
 
     /**
-     * @brief 转成字符串
+     * @brief 将配置参数的值转为字符串，用于序列化
      */
     virtual std::string toString() = 0;
 
     /**
-     * @brief 从字符串初始化值
+     * @brief 从字符串解析配置参数的值，用于反序列化
      * @param val
      */
     virtual bool fromString(const std::string& val) = 0;
@@ -75,6 +76,7 @@ protected:
     std::string m_description;   ///配置参数描述
 
 };
+
 
 /**
  * @brief 配置参数模板子类，保存对应类型的参数值
@@ -97,12 +99,14 @@ public:
     ConfigVar(const std::string& name,
               const T& default_value,
               const std::string& description = "")
-          : ConfigVarBase(name, description),
+          : ConfigVarBase(name, description),   ///调用基类构造函数
           m_val(default_value){
     }
 
     /**
      * @brief 将参数值转成 YAML String
+     * @details 使用 boost::lexical_cast 将值 m_val 转换为字符串。
+     *          如果转换失败，捕获异常并记录日志
      */
     std::string toString() override{
         try{
@@ -117,6 +121,8 @@ public:
     /**
      * @brief 从字符串初始化值
      * @param val
+     * @details 使用 boost::lexical_cast 将字符串 val 转换为类型 T。
+     *          如果转换失败，捕获异常并记录日志
      */
     bool fromString(const std::string& val) override {
         try {
@@ -127,12 +133,19 @@ public:
         }
         return false;
     }
-
+    /**
+     * @brief 返回配置变量的值
+     */
     const T getValue() const {return m_val;}
+
+    /**
+     * @brief 设置配置变量的新值
+     * @param v
+     */
     void setValue(const T& v) {m_val = v;}
 private:
+    /// 存储配置变量的值，类型由模板参数 T 确定
     T m_val;
-
 };
 
 /**
@@ -142,7 +155,17 @@ private:
 class Config{
 public:
     typedef std::unordered_map<std::string, ConfigVarBase::ptr> ConfigVarMap;
-
+    /**
+     * @brief 获取/ 创建 对应参数名的配置参数
+     * @tparam T 模板类型
+     * @param name 配置参数名称
+     * @param default_value 参数默认值
+     * @param description   参数描述
+     * @details 获取参数名为 name 的配置参数 如果存在直接返回
+     *          如果不存在，创建参数配置并用 defaul_value赋值
+     * @return 返回对应参数配置， 如果参数存在但类型不匹配 返回 nullptr
+     * @exception 如果参数包含非法字符 抛出异常
+     */
     template<class T>
     static typename ConfigVar<T>::ptr Lookup(const std::string& name,
              const T& default_value, const std::string& description = ""){
@@ -162,6 +185,12 @@ public:
         return v;
     }
 
+    /**
+     * @brief 查找配置参数
+     * @tparam T
+     * @param name
+     * @return 返回配置参数名为 name 的配置参数
+     */
     template<class T>
     static typename ConfigVar<T>::ptr Lookup(const std::string& name){
         auto it = s_datas.find(name);
@@ -171,10 +200,21 @@ public:
         return std::dynamic_pointer_cast<ConfigVar<T>>(it->second);
     }
 
+    /**
+     * @brief 使用 YAM::Node 初始化配置模块
+     * @param root
+     */
+    static void LoadFromYaml(const YAML::Node& root);
+
+    static ConfigVarBase::ptr LookupBase(const std::string& name);
+
+
 
 private:
     static ConfigVarMap s_datas;
 };
+
+
 
 
 

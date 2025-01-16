@@ -11,3 +11,6 @@ logs:
         - type: FileLogAppender
           file: /apps/logs/sylar/system.txt
         - type: StdoutLogAppender
+system:
+  port: 9900
+  value: 15
