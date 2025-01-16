@@ -10,7 +10,7 @@ Log系统
     - https://blog.csdn.net/qq_35099224/category_12613947.html
     - https://chatgpt.com/
 - 相关知识点笔记
-    - https://flowus.cn/af011fe0-7c78-4501-828d-921de6fa1793
+    - https://github.com/Lwaiz/sylar_leo/blob/master/Sylar_note.md
 
 **2025.1.15**
 
