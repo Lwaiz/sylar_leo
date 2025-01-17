@@ -28,3 +28,33 @@ system:
         k: 300
         k2: 200
         k3: 100
+
+class:
+  person:
+      name: leo
+      age: 20
+      sex: true
+  map:
+    leo01:
+        name: leo01
+        age: 21
+        sex: true
+    leo02:
+        name: leo02
+        age: 22
+        sex: false
+  vec_map:
+    k1:
+      - name: leo03
+        age: 21
+        sex: true
+      - name: leo04
+        age: 22
+        sex: false
+    k2:
+      - name: leo05
+        age: 21
+        sex: true
+      - name: leo06
+        age: 22
+        sex: false

@@ -342,6 +342,8 @@ template <class T, class FromStr = LexicalCast<std::string, T>
 class ConfigVar : public ConfigVarBase{
 public:
     typedef std::shared_ptr<ConfigVar> ptr;
+    /// 配置事件回调函数（callback -- cb）
+    typedef std::function<void (const T& old_value, const T& new_value)> on_change_cb;
 
     /**
      * @brief 通过 参数名，参数值，描述 构造 ConfigVar
@@ -397,11 +399,61 @@ public:
      * @brief 设置配置变量的新值
      * @param v
      */
-    void setValue(const T& v) {m_val = v;}
+    void setValue(const T& v) {
+        if(v == m_val){
+            return;
+        }
+        for(auto& i : m_cbs){
+            i.second(m_val, v);
+
+            m_val = v;
+        }
+    }
+
+    /**
+     * @brief 返回参数值的类型名称
+     */
     std::string getTypeName() const override {return TypeToName<T>();}
+
+    /**
+     * @brief 添加变化回调函数
+     * @param key 回调函数 唯一 ID
+     * @param cb  回调函数
+     */
+    void addListener(uint64_t key, on_change_cb  cb){
+        m_cbs[key] = cb;
+    }
+
+    /**
+     * @brief 删除回调函数
+     * @param key 回调函数 唯一 id
+     */
+    void delListener(uint64_t key){
+        m_cbs.erase(key);
+    }
+
+    /**
+     * @brief 获取回调函数
+     * @return 如果存在返回对应的回调函数,否则返回nullptr
+     */
+    on_change_cb getListener(uint64_t key){
+        auto it = m_cbs.find(key);
+        return it == m_cbs.end() ? nullptr : it->second;
+    }
+
+    /**
+     * @brief 清理所有回调函数
+     */
+    void clearListener(){
+        m_cbs.clear();
+    }
+
 private:
     /// 存储配置变量的值，类型由模板参数 T 确定
     T m_val;
+    ///变更回调函数组
+    /// uint64_t: key 要求唯一；一般可以用hash
+    std::map<uint64_t , on_change_cb > m_cbs;
 };
 
 /**
