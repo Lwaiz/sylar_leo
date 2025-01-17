@@ -43,6 +43,7 @@ public:
     ConfigVarBase(const std::string& name, const std::string& description = "")
         :m_name(name),
         m_description(description){
+        ///小写化
         std::transform(m_name.begin(), m_name.end(),m_name.begin(), ::tolower);
     }
     /**
@@ -403,11 +404,10 @@ public:
         if(v == m_val){
             return;
         }
-        for(auto& i : m_cbs){
+        for(auto& i : m_cbs) {
             i.second(m_val, v);
-
-            m_val = v;
         }
+        m_val = v;
     }
 
     /**
