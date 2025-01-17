@@ -257,28 +257,40 @@ int main() {
   - `fromString()`：从字符串反序列化为配置参数值。
 
 #### 2. `ConfigVar`
-**作用**：模板类，用于存储具体类型的配置变量，继承自 `ConfigVarBase`。
+**作用**：配置参数模板子类，用于存储具体类型的配置变量，继承自 `ConfigVarBase`。
 - **模板参数**：
   - `T`：配置参数的类型。
   - `FromStr`：从字符串转换为 `T` 类型的仿函数。
   - `ToStr`：从 `T` 类型转换为字符串的仿函数。
+  - `addListener`、`delListener`、`clearListener`等方法用于设置配置值改变时的回调函数
 - **主要功能**：
   - 保存和操作具体类型的配置变量值。
-  - 利用模板特化支持容器类型（如 `std::vector<T>`）。
+  - 利用模板特化支持容器类型。
 
 #### 3. `LexicalCast`
 **作用**：通用的类型转换工具。
 - **主要功能**：
   - 基本类型之间的转换（如 `int` 转 `std::string`）。
   - 支持容器类型与 YAML 字符串之间的相互转换。
-- **特化实现**：
+- **特化实现**：支持 vector,list,set,unordered_set,map,unordered_map
   - `LexicalCast<std::string, std::vector<T>>`：从 YAML 字符串转换为 `std::vector<T>`。
   - `LexicalCast<std::vector<T>, std::string>`：将 `std::vector<T>` 转换为 YAML 字符串。
-
+  - `LexicalCast<std::list<T>, std::string>`：将 `std::list<T>` 转换为 YAML 字符串。 
+  - `LexicalCast<std::string, std::set<T>>`：将 YAML 字符串转换为 `std::set<T>`。 
+  - `LexicalCast<std::set<T>, std::string>`：将 `std::set<T>` 转换为 YAML 字符串。 
+  - `LexicalCast<std::string, std::unordered_set<T>>`：将 YAML 字符串转换为 `std::unordered_set<T>`。 
+  - `LexicalCast<std::unordered_set<T>, std::string>`：将 `std::unordered_set<T>` 转换为 YAML 字符串。 
+  - `LexicalCast<std::string, std::map<std::string, T>>`：将 YAML 字符串转换为 `std::map<std::string, T>`。 
+  - `LexicalCast<std::map<std::string, T>, std::string>`：将 `std::map<std::string, T>` 转换为 YAML 字符串。 
+  - `LexicalCast<std::string, std::unordered_map<std::string, T>>`：将 YAML 字符串转换为 `std::unordered_map<std::string, T>`。 
+  - `LexicalCast<std::unordered_map<std::string, T>, std::string>`：将 `std::unordered_map<std::string, T>` 转换为 YAML 字符串。
 #### 4. `Config`
 **作用**：配置管理类，提供全局统一的配置操作接口。
 - **主要成员变量**：
   - `s_datas`：保存所有配置参数的映射表（键为参数名，值为配置变量指针）。
+  - 提供了`Lookup`方法来根据配置名称查找配置项（并返回指定类型的配置项），
+      - 如果找不到则可以创建新的配置项。
+  - `LoadFromYaml`方法用于从YAML节点加载配置
 - **主要功能**：
   - 动态查找和创建配置参数。
   - 从 YAML 文件加载配置。
