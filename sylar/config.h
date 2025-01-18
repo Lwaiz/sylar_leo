@@ -13,6 +13,7 @@
 #define SYLAR_CONFIG_H
 
 #include <memory>
+#include <string>
 #include <sstream>
 #include <boost/lexical_cast.hpp>
 #include <yaml-cpp/yaml.h>
@@ -23,10 +24,11 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <functional>
+
 #include "log.h"
+#include "util.h"
 
-
-namespace sylar{
+namespace sylar {
 
 /**
  * @brief 配置变量 基类
@@ -71,11 +73,11 @@ public:
      * @param val
      */
     virtual bool fromString(const std::string& val) = 0;
+
     virtual std::string getTypeName() const = 0;
 protected:
     std::string m_name;          ///配置参数名称
     std::string m_description;   ///配置参数描述
-
 };
 
 
@@ -404,6 +406,7 @@ public:
         if(v == m_val){
             return;
         }
+        ///当setValue时 值发生变化，执行回调函数，类似于观察者模式
         for(auto& i : m_cbs) {
             i.second(m_val, v);
         }
@@ -420,8 +423,11 @@ public:
      * @param key 回调函数 唯一 ID
      * @param cb  回调函数
      */
-    void addListener(uint64_t key, on_change_cb  cb){
-        m_cbs[key] = cb;
+    uint64_t addListener(on_change_cb  cb){
+        static uint64_t s_fun_id = 0;
+        ++s_fun_id;
+        m_cbs[s_fun_id] = cb;
+        return s_fun_id;
     }
 
     /**
@@ -478,8 +484,8 @@ public:
     template<class T>
     static typename ConfigVar<T>::ptr Lookup(const std::string& name,
              const T& default_value, const std::string& description = ""){
-        auto it = s_datas.find(name);
-        if(it != s_datas.end()){
+        auto it = GetDatas().find(name);
+        if(it != GetDatas().end()){
             auto tmp = std::dynamic_pointer_cast<ConfigVar<T>>(it->second);
             if(tmp){
                 SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << "Lookup name= " << name << " exists";
@@ -498,7 +504,7 @@ public:
             throw std::invalid_argument(name);
         }
         typename ConfigVar<T>::ptr v(new ConfigVar<T>(name, default_value, description));
-        s_datas[name] = v;
+        GetDatas()[name] = v;
         return v;
     }
 
@@ -510,8 +516,8 @@ public:
      */
     template<class T>
     static typename ConfigVar<T>::ptr Lookup(const std::string& name){
-        auto it = s_datas.find(name);
-        if(it == s_datas.end()){
+        auto it = GetDatas().find(name);
+        if(it == GetDatas().end()){
             return nullptr;
         }
         return std::dynamic_pointer_cast<ConfigVar<T>>(it->second);
@@ -528,7 +534,14 @@ public:
 
 
 private:
-    static ConfigVarMap s_datas;
+    //static ConfigVarMap s_datas;
+    /**
+     * @return 返回所有配置项
+     */
+    static ConfigVarMap& GetDatas(){
+        static ConfigVarMap s_datas;
+        return s_datas;
+    }
 };
 
 

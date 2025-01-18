@@ -18,6 +18,7 @@
 #include "util.h"
 #include "singleton.h"
 
+
 ///宏定义
 
 /**
@@ -78,7 +79,7 @@
 /**
  * @brief 获取 name 的日志器
  */
-#define SYLAR_LOG_NAME(name) syalr::LoggerMgr::GetInstance()->getLogger(name)
+#define SYLAR_LOG_NAME(name) sylar::LoggerMgr::GetInstance()->getLogger(name)
 
 
 namespace sylar {
@@ -388,12 +389,12 @@ public:
     /**
      * @brief 更改日志格式器
      */
-    void setFormatter(LogFormatter::ptr val) {m_formatter = val;}
+    void setFormatter(LogFormatter::ptr val);
 
     /**
      * @brief 获取日志格式器
      */
-    LogFormatter::ptr getFormatter() const {return m_formatter;}
+    LogFormatter::ptr getFormatter();
 
     /**
      * @brief 获取日志级别
@@ -417,7 +418,7 @@ protected:
  * @brief  日志器
  */
 class Logger : public std::enable_shared_from_this<Logger>{
-    //friend class LoggerManager;
+    friend class LoggerManager;
 public:
     typedef std::shared_ptr<Logger> ptr;
     //typedef Spinlock MutexType;
