@@ -17,12 +17,12 @@
 namespace sylar{
 
 /// 全局配置变量 存储所有已注册的配置变量
-Config::ConfigVarMap Config::s_datas;
+//Config::ConfigVarMap Config::s_datas;
 
 /// 根据名称查找配置变量
 ConfigVarBase::ptr Config::LookupBase(const std::string &name) {
-    auto it = s_datas.find(name);
-    return it == s_datas.end() ? nullptr : it->second;
+    auto it = GetDatas().find(name);
+    return it == GetDatas().end() ? nullptr : it->second;
 }
 
 /**
