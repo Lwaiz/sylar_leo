@@ -69,6 +69,7 @@ cmake version 3.22.1
 ## 架构
 ### 1. 核心类
 ![img.png](readme_img/img.png)
+![img.png](readme_img/log.png)
 #### LogLevel 类
 **定义日志级别**
 
@@ -245,9 +246,18 @@ int main() {
 - **日志支持**：对于异常情况提供详细的日志记录。
 
 ## 系统架构
+- **ConfigVarBase**
+
+  ```配置变量的基类，其主要是虚方法，定义了配置项中共有的成员和方法，其具体实验由基类的具体子类负责实现。其中重点是toString()方法和fromString()方法，其分别负责将配置信息转化字符串和从字符串中解析出配置。```
+- **ConfigVar**
+
+  ```配置参数模板子类，并且是模板类，其具有三个模板参数，分别是配置项类型模板T、仿函数FromStr和仿函数Tostr。ConfigVar类在ConfigVarBase的基础上，增加了AddListener方法和delListener等方法，用于增删配置变更回调函数。```
+- **Config**
+
+  ```ConfigVar的管理类，其提供便捷的方法创建、访问ConfigVar，其主要方法未Lookup方法，可根据配置的名称查询配置项，如果查询时未找到对应的配置则新建一个配置项。其还有从配置文件中读取配置、遍历所有配置项等方法。其中，Config中的方法都是static方法，确保全局只有一个实例。```
 
 ### 核心组件
-
+![img.png](readme_img/config.png)
 #### 1. `ConfigVarBase`
 **作用**：配置变量的基类，定义了所有配置项的基本属性和接口。
 - **主要成员变量**：
@@ -352,3 +362,7 @@ std::cout << g_int_config->toString() << std::endl;
 - `boost`：用于类型转换。
 - `yaml-cpp`：解析 YAML 配置文件。
 
+## 配置系统整合日志系统
+
+
+# 线程模块

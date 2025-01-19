@@ -8,6 +8,8 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -fPIC -ggdb -std=c++11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations")
 #set(CMAKE_C_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -fPIC -ggdb -std=c11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations")
 
+include (cmake/utils.cmake)
+
 set(CMAKE_GENERATOR_PLATFORM x64)
 
 include_directories(.)
@@ -20,6 +22,7 @@ set(LIB_SRC
         sylar/util.cpp
         sylar/config.cpp
         )
+
 #生成共享库
 add_library(sylar SHARED ${LIB_SRC})
 
@@ -32,6 +35,7 @@ target_link_libraries(test  sylar yaml-cpp)
 
 add_executable(test_config tests/test_config.cpp)
 add_dependencies(test_config sylar)
+#force_redefine_file_macro_for_sources(test_config) #___FILE___
 target_link_libraries(test_config  sylar yaml-cpp)
 
 #设置输出路径
