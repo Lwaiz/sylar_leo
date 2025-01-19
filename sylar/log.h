@@ -385,7 +385,7 @@ public:
     /**
      * @brief 将日志输出目标配置转换成 YAML String
      */
-    //virtual std::string toYamlString() = 0;
+    virtual std::string toYamlString() = 0;
     /**
      * @brief 更改日志格式器
      */
@@ -496,7 +496,7 @@ public:
     /**
      * @brief 将日志器的配置转换成 YAML String
      */
-    //std::string toYamlString();
+    std::string toYamlString();
 
 private:
     /// 日志名称
@@ -521,7 +521,7 @@ class StdoutLogAppender : public LogAppender{
 public:
     typedef std::shared_ptr<StdoutLogAppender> ptr;
     void log(Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override;
-    // std::string toYamlString() override;
+    std::string toYamlString() override;
 };
 
 /**
@@ -532,7 +532,7 @@ public:
     typedef std::shared_ptr<FileLogAppender> ptr;
     FileLogAppender(const std::string& filename);
     void log(Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override;
-
+    std::string toYamlString() override;
     /**
      * @brief 重新打开文件， 文件打开成功返回true
      * @return 成功返回 true
@@ -577,6 +577,7 @@ public:
      */
     Logger::ptr getRoot() const {return m_root;}
 
+    std::string toYamlString();
 private:
     //MutexType m_mutex;
     ///日志器容器  以名称为键

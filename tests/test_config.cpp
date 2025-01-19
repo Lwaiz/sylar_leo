@@ -13,6 +13,7 @@
 #include "../sylar/config.h"
 #include "../sylar/log.h"
 #include <yaml-cpp/yaml.h>
+#include <iostream>
 
 #if 1
 sylar::ConfigVar<int>::ptr g_int_value_config =
@@ -212,6 +213,20 @@ void test_class(){
 
 }
 
+void test_log(){
+    static sylar::Logger::ptr system_log = SYLAR_LOG_NAME("system");
+    SYLAR_LOG_INFO(system_log) << "hello system" << std::endl;
+    std::cout << sylar::LoggerMgr::GetInstance()->toYamlString() << std::endl;
+    YAML::Node root = YAML::LoadFile("../bin/conf/log.yml");
+    sylar::Config::LoadFromYaml(root);
+    std::cout << "==============" << std::endl;
+    std::cout << sylar::LoggerMgr::GetInstance()->toYamlString() << std::endl;
+    std::cout << "==============" << std::endl;
+    SYLAR_LOG_INFO(system_log) << "hello system" << std::endl;
+
+    system_log->setFormatter("%d - %m%n");
+    SYLAR_LOG_INFO(system_log) << "hello system" << std::endl;
+}
 
 int main(int argc, char** argv) {
 
@@ -219,7 +234,9 @@ int main(int argc, char** argv) {
 
     //test_config();
 
-    test_class();
+    //test_class();
+
+    test_log();
 
     return 0;
 }
