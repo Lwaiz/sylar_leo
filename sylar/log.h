@@ -17,6 +17,7 @@
 #include <map>
 #include "util.h"
 #include "singleton.h"
+#include "thread.h"
 
 
 ///宏定义
@@ -366,7 +367,7 @@ class LogAppender{
     friend class Logger;
 public:
     typedef std::shared_ptr<LogAppender> ptr;
-    //typedef Spinlock MutexType;
+    typedef Spinlock MutexType;
 
     /**
      * @brief 析构函数
@@ -409,7 +410,7 @@ public:
 protected:
     LogLevel::Level m_level = LogLevel::DEBUG;   ///日志级别
     bool m_hasFormatter = false;     ///是否有自己的日志格式器
-    //MutexType m_mutex;
+    MutexType m_mutex;
     LogFormatter::ptr m_formatter;   ///日志格式器
 };
 
@@ -421,7 +422,7 @@ class Logger : public std::enable_shared_from_this<Logger>{
     friend class LoggerManager;
 public:
     typedef std::shared_ptr<Logger> ptr;
-    //typedef Spinlock MutexType;
+    typedef Spinlock MutexType;
 
     /**
      * @brief 构造函数
@@ -506,7 +507,7 @@ private:
     /// Appender 日志目标集合
     std::list<LogAppender::ptr> m_appenders;
 
-    //MutexType m_mutex;
+    MutexType m_mutex;
     ///日志格式器
     LogFormatter::ptr m_formatter;
     ///主日志器
@@ -551,6 +552,7 @@ private:
  */
 class LoggerManager{
 public:
+    typedef Spinlock MutexType;
     /**
      * @brief 构造函数
      * @details 初始化主日志器 m_root
@@ -579,7 +581,8 @@ public:
 
     std::string toYamlString();
 private:
-    //MutexType m_mutex;
+
+    MutexType m_mutex;
     ///日志器容器  以名称为键
     std::map<std::string, Logger::ptr> m_loggers;
     ///主日志器

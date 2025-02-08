@@ -21,6 +21,8 @@
 #include <stdint.h>
 #include <atomic>
 #include <list>
+#include <boost/noncopyable.hpp>
+
 
 #include "noncopyable.h"
 //#include "fiber.h"
@@ -256,24 +258,9 @@ public:
     /// 局部锁
     typedef ScopedLockImpl<NullMutex> Lock;
 
-    /**
-     * @brief 构造函数
-     */
     NullMutex() {}
-
-    /**
-     * @brief 析构函数
-     */
     ~NullMutex() {}
-
-    /**
-     * @brief 加锁
-     */
     void lock() {}
-
-    /**
-     * @brief 解锁
-     */
     void unlock() {}
 };
 
@@ -309,6 +296,128 @@ private:
     ///读写锁
     pthread_rwlock_t m_lock;
 };
+
+/**
+ * @brief 空读写锁（调试）
+ */
+class NullRWMutex {
+public:
+    ///局部读锁
+    typedef ReadScopedLockImpl<NullMutex> ReadLock;
+    ///局部写锁
+    typedef WriteScopedLockImpl<NullMutex> WriteLock;
+
+    NullRWMutex(){}
+    ~NullRWMutex(){}
+    void rdlock(){}
+    void wrlock(){}
+    void unlock(){}
+};
+
+/**
+ * @brief 自旋锁
+ */
+class Spinlock : boost::noncopyable {
+public:
+    ///局部锁
+    typedef ScopedLockImpl<Spinlock> Lock;
+
+    /**
+     * @brief 构造函数
+     */
+     Spinlock() {
+        pthread_spin_init(&m_mutex, 0);
+     }
+
+     /**
+      * @brief 析构函数
+      */
+     ~Spinlock(){
+         pthread_spin_destroy(&m_mutex);
+     }
+
+     /**
+      * @brief 上锁
+      */
+     void lock(){
+         pthread_spin_lock(&m_mutex);
+     }
+
+     /**
+      * @brief 解锁
+      */
+     void unlock(){
+         pthread_spin_unlock(&m_mutex);
+     }
+private:
+    /// 自旋锁
+    pthread_spinlock_t m_mutex;
+};
+
+/**
+ * @brief 原子锁
+ */
+class CASLock : boost::noncopyable {
+public:
+    ///局部锁
+    typedef ScopedLockImpl<CASLock> Lock;
+
+    /**
+     * @brief 构造函数
+     */
+    CASLock(){
+        m_mutex.clear();
+    }
+
+    /**
+     * @brief 析构函数
+     */
+    ~CASLock(){
+    }
+
+    /**
+     * @brief 上锁
+     */
+    void lock(){
+        while(std::atomic_flag_test_and_set_explicit(&m_mutex, std::memory_order_acquire));
+    }
+
+    /**
+     * @brief 解锁
+     */
+    void unlock(){
+        std::atomic_flag_clear_explicit(&m_mutex, std::memory_order_release);
+    }
+
+private:
+    ///原子状态
+    volatile std::atomic_flag m_mutex;
+};
+
+
+/*
+class Scheduler;
+class FiberSemapgore : boost::noncopyable {
+public:
+    typedef Spinlock MutexType;
+
+    FiberSemapgore(size_t initial_concurrency = 0);
+    ~FiberSemapgore();
+
+    bool tryWait();
+    void wait();
+    void notify();
+
+    size_t getConcurrency() const {return m_concurrency;}
+    void reset(){m_concurrency = 0;}
+private:
+    MutexType m_mutex;
+    std::list<std::pair<Scheduler*, Fiber::ptr>> m_waiters;
+    size_t m_concurrency;
+};
+
+ */
+
 
 }
 

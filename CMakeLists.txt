@@ -49,7 +49,7 @@ target_link_libraries(test_config  sylar "${LIBS}")
 add_executable(test_thread tests/test_thread.cpp)
 add_dependencies(test_thread sylar)
 #force_redefine_file_macro_for_sources(test_config) #___FILE___
-target_link_libraries(test_thread  sylar "${LIBS}")
+target_link_libraries(test_thread sylar "${LIBS}")
 
 #设置输出路径
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)

@@ -27,6 +27,7 @@
 
 #include "log.h"
 #include "util.h"
+#include "thread.h"
 
 namespace sylar {
 
@@ -344,6 +345,9 @@ template <class T, class FromStr = LexicalCast<std::string, T>
                  , class ToStr = LexicalCast<T, std::string>>
 class ConfigVar : public ConfigVarBase{
 public:
+
+    typedef RWMutex RWMutexType;
+
     typedef std::shared_ptr<ConfigVar> ptr;
     /// 配置事件回调函数（callback -- cb）
     typedef std::function<void (const T& old_value, const T& new_value)> on_change_cb;
@@ -369,6 +373,7 @@ public:
     std::string toString() override{
         try{
             //return boost::lexical_cast<std::string>(m_val);
+            RWMutexType::ReadLock lock(m_mutex);
             return ToStr()(m_val);
         } catch(std::exception& e){
             SYLAR_LOG_ERROR(SYLAR_LOG_ROOT()) << "ConfigVar::toString exception"
@@ -396,20 +401,27 @@ public:
     /**
      * @brief 返回配置变量的值
      */
-    const T getValue() const {return m_val;}
+    const T getValue() const {
+        RWMutexType::ReadLock lock(m_mutex);
+        return m_val;
+    }
 
     /**
      * @brief 设置配置变量的新值
      * @param v
      */
     void setValue(const T& v) {
-        if(v == m_val){
-            return;
+        {
+            RWMutexType::ReadLock lock(m_mutex);
+            if (v == m_val) {
+                return;
+            }
+            ///当setValue时 值发生变化，执行回调函数，类似于观察者模式
+            for (auto &i: m_cbs) {
+                i.second(m_val, v);
+            }
         }
-        ///当setValue时 值发生变化，执行回调函数，类似于观察者模式
-        for(auto& i : m_cbs) {
-            i.second(m_val, v);
-        }
+        RWMutexType::WriteLock lock(m_mutex);
         m_val = v;
     }
 
@@ -425,6 +437,7 @@ public:
      */
     uint64_t addListener(on_change_cb  cb){
         static uint64_t s_fun_id = 0;
+        RWMutexType::WriteLock lock(m_mutex);
         ++s_fun_id;
         m_cbs[s_fun_id] = cb;
         return s_fun_id;
@@ -435,6 +448,7 @@ public:
      * @param key 回调函数 唯一 id
      */
     void delListener(uint64_t key){
+        RWMutexType::WriteLock lock(m_mutex);
         m_cbs.erase(key);
     }
 
@@ -443,6 +457,7 @@ public:
      * @return 如果存在返回对应的回调函数,否则返回nullptr
      */
     on_change_cb getListener(uint64_t key){
+        RWMutexType::ReadLock lock(m_mutex);
         auto it = m_cbs.find(key);
         return it == m_cbs.end() ? nullptr : it->second;
     }
@@ -451,10 +466,12 @@ public:
      * @brief 清理所有回调函数
      */
     void clearListener(){
+        RWMutexType::WriteLock lock(m_mutex);
         m_cbs.clear();
     }
 
 private:
+    RWMutexType m_mutex;
     /// 存储配置变量的值，类型由模板参数 T 确定
     T m_val;
     ///变更回调函数组
@@ -469,7 +486,7 @@ private:
 class Config{
 public:
     typedef std::unordered_map<std::string, ConfigVarBase::ptr> ConfigVarMap;
-
+    typedef RWMutex RWMutexType;
     /**
      * @brief 获取/ 创建 对应参数名的配置参数
      * @tparam T 模板类型
@@ -484,6 +501,7 @@ public:
     template<class T>
     static typename ConfigVar<T>::ptr Lookup(const std::string& name,
              const T& default_value, const std::string& description = ""){
+        RWMutexType::WriteLock lock(GetMutex());
         auto it = GetDatas().find(name);
         if(it != GetDatas().end()){
             auto tmp = std::dynamic_pointer_cast<ConfigVar<T>>(it->second);
@@ -516,6 +534,7 @@ public:
      */
     template<class T>
     static typename ConfigVar<T>::ptr Lookup(const std::string& name){
+        RWMutexType::WriteLock lock(GetMutex());
         auto it = GetDatas().find(name);
         if(it == GetDatas().end()){
             return nullptr;
@@ -529,9 +548,25 @@ public:
      */
     static void LoadFromYaml(const YAML::Node& root);
 
+    /**
+     * @brief 加载 path 文件夹里面的配置文件
+     * @param path
+     * @param force
+     */
+    static void LoadFromConfDir(const std::string& path, bool force = false);
+
+    /**
+     * @brief 查找配置参数， 返回配置参数的基类
+     * @param name
+     * @return
+     */
     static ConfigVarBase::ptr LookupBase(const std::string& name);
 
-
+    /**
+     * @brief 遍历配置模块里面所有配置
+     * @param cb  配置项 回调函数
+     */
+    static void Visit(std::function<void(ConfigVarBase::ptr)> cb);
 
 private:
     //static ConfigVarMap s_datas;
@@ -542,6 +577,14 @@ private:
         static ConfigVarMap s_datas;
         return s_datas;
     }
+
+    /**
+     * @brief 配置项的 RWMutex
+     */
+     static RWMutexType& GetMutex() {
+         static RWMutexType s_mutex;
+         return s_mutex;
+     }
 };
 
 

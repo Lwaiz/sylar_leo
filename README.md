@@ -1,30 +1,31 @@
 # Sylar-leo
 
 ---
-
-**2025.1.6**
-
-Log系统
+```
 - 学习参考
     - https://github.com/sylar-yin/sylar/tree/master
     - https://blog.csdn.net/qq_35099224/category_12613947.html
+    - https://blog.beanljun.top/tags/C-C/
     - https://chatgpt.com/
 - 相关知识点笔记
     - https://github.com/Lwaiz/sylar_leo/blob/master/Sylar_note.md
+```
 
-**2025.1.15**
+```
+**2025.1.6**   Log系统
 
-配置系统
+**2025.1.15**  配置系统
 
+**2025.2.5**   线程模块
 
-
-
+**2025.2.9**   协程模块
+```
 
 ---
 
 # 开发环境
 
-```
+```powershell
 wsl2 ---- Ubuntu-22.04
 
 gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0
@@ -364,5 +365,118 @@ std::cout << g_int_config->toString() << std::endl;
 
 ## 配置系统整合日志系统
 
+---
 
-# 线程模块
+---
+# 线程模块 
+
+---
+
+## 功能特性
+
+该模块提供了一个 **线程管理和同步机制** 的实现。它包括以下主要功能：
+- 线程的创建与管理（Thread 类）
+- 各种同步原语，包括互斥锁、读写锁、信号量等（Mutex、RWMutex、Semaphore 等类）
+- 线程同步的模板实现（ScopedLockImpl、ReadScopedLockImpl、WriteScopedLockImpl 等类）
+
+这些功能实现了多线程并发控制与线程间资源共享时的同步操作。
+
+## 核心组件
+
+```
+Thread
+├── Thread        // 线程类，管理线程创建、启动、终止    基于 pthread 实现
+├── Mutex         // 互斥量类，防止线程间资源竞争       基于 pthread_mutex_t 实现
+├── RWMutex       // 读写锁类，优化读操作的性能         基于 pthread_rwlock_t 实现
+├── Semaphore     // 信号量类，控制并发数              基于 sem_t 实现
+├── Spinlock      // 自旋锁类，针对高并发低延迟场景     基于pthread_spinlock_t实现
+└── CASLock       // 基于原子操作的锁                 基于std::atomic_flag实现
+```
+
+### 1. Thread 类
+Thread 类是一个封装线程操作的类，主要用于创建和管理线程。它提供了对线程执行、名称、ID等信息的访问，以及等待线程结束的功能。该类使用了 pthread 库来实现线程的创建和管理。
+
+**线程构造和执行：**
+
+```
+通过传入一个线程执行回调函数（cb）和线程名称（name）来创建线程。
+线程启动时，会执行传入的回调函数 cb。 
+```
+
+**线程信息访问：**
+
+- getId()：获取线程的 ID（pid_t 类型）。
+- getName()：获取线程的名称。
+
+**等待线程执行完毕：**
+
+- join()：等待线程执行完毕，类似于 pthread_join()，确保线程退出。
+
+**静态线程操作：**
+
+- GetThis()：获取当前线程的指针。
+- GetName() 和 SetName()：获取和设置当前线程的名称。
+
+**线程入口函数：**
+
+- run()：作为线程的入口函数，调用传入的回调函数来执行线程任务
+
+### 2. Semaphore 类
+   Semaphore 是信号量类，通常用于控制对共享资源的访问。在这个类中：
+
+- wait() 方法会使线程进入等待状态（即等待信号量）。
+- notify() 方法会释放信号量，通知一个等待的线程。
+信号量是通过 sem_t 类型实现的，sem_t 是 POSIX 标准定义的信号量类型，通常用于进程间或线程间的同步。
+
+### 3. ScopedLockImpl 模板类
+   ScopedLockImpl 是一个局部锁（RAII 锁）模板类，在作用域内自动加锁，离开作用域时自动解锁。它有以下功能：
+
+- 在构造函数中调用 m_mutex.lock() 来加锁。
+- 在析构函数中调用 unlock() 来解锁，确保资源释放。
+
+### 4. ReadScopedLockImpl 模板类
+   ReadScopedLockImpl 是一个局部读锁模板类，用于读写锁（pthread_rwlock_t）。它的功能与 ScopedLockImpl 类似，只不过是加读锁而不是普通的互斥锁：
+
+- 在构造函数中调用 m_mutex.rdlock() 来加读锁。
+- 在析构函数中调用 unlock() 来解锁。
+
+### 5.WriteScopedLockImpl 模板类
+   WriteScopedLockImpl 是一个局部写锁模板类，类似于 ReadScopedLockImpl，但是用于加写锁：
+
+- 在构造函数中调用 m_mutex.wrlock() 来加写锁。
+- 在析构函数中调用 unlock() 来解锁。
+
+### 6. Mutex 类
+   Mutex 类是一个基本的互斥量实现，内部使用 pthread_mutex_t 来加锁和解锁：
+
+- lock()：调用 pthread_mutex_lock() 来加锁。
+- unlock()：调用 pthread_mutex_unlock() 来解锁。
+Mutex 类同时定义了一个 Lock 类型，表示局部锁。
+
+### 7. NullMutex 类
+   NullMutex 类是一个空锁实现，通常用于调试，避免在某些情况下加锁的开销：
+
+- lock() 和 unlock() 方法为空实现，不做任何操作。
+
+### 8. RWMutex 类
+   RWMutex 是一个读写锁实现，**用于支持多个线程并发读取，或者一个线程独占写入**：
+
+- rdlock()：加读锁，允许多个线程并发读取。
+- wrlock()：加写锁，独占资源。
+- unlock()：释放锁。
+RWMutex 类同时定义了 ReadLock 和 WriteLock 类型，分别表示局部的读锁和写锁。
+
+### 9. NullRWMutex（空读写锁）
+类似 NullMutex，但用于读写锁的场景。
+
+方法：rdlock()、wrlock() 和 unlock() 都为空实现。
+### 10. Spinlock（自旋锁）
+自旋锁是一种高效的锁机制，当线程无法获取锁时会反复检查锁是否可用，而不是将自己挂起。
+
+- lock()：尝试获取自旋锁，若无法获取则反复自旋。
+- unlock()：释放自旋锁。
+### 11. CASLock（原子锁） 
+使用原子操作实现的锁，通常用于高并发场景，避免线程上下文切换的开销。
+
+- lock()：使用原子操作尝试获取锁，直到获取成功。
+- unlock()：通过原子操作释放锁。
