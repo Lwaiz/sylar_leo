@@ -1,7 +1,7 @@
 # Sylar-leo
 
 ---
-```
+
 - 学习参考
     - https://github.com/sylar-yin/sylar/tree/master
     - https://blog.csdn.net/qq_35099224/category_12613947.html
@@ -9,7 +9,7 @@
     - https://chatgpt.com/
 - 相关知识点笔记
     - https://github.com/Lwaiz/sylar_leo/blob/master/Sylar_note.md
-```
+
 
 ```
 **2025.1.6**   Log系统
@@ -381,7 +381,7 @@ std::cout << g_int_config->toString() << std::endl;
 
 这些功能实现了多线程并发控制与线程间资源共享时的同步操作。
 
-     https://blog.beanljun.top/sylar/thread/
+https://blog.beanljun.top/sylar/thread/
 
 ## 核心组件
 
