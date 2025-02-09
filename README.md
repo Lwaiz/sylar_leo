@@ -381,6 +381,8 @@ std::cout << g_int_config->toString() << std::endl;
 
 这些功能实现了多线程并发控制与线程间资源共享时的同步操作。
 
+     https://blog.beanljun.top/sylar/thread/
+
 ## 核心组件
 
 ```
