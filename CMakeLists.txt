@@ -23,6 +23,7 @@ set(LIB_SRC
         sylar/config.cpp
         sylar/thread.cpp
         sylar/mutex.cpp
+        #sylar/macro.cpp
         )
 
 #生成共享库
@@ -48,8 +49,12 @@ target_link_libraries(test_config  sylar "${LIBS}")
 
 add_executable(test_thread tests/test_thread.cpp)
 add_dependencies(test_thread sylar)
-#force_redefine_file_macro_for_sources(test_config) #___FILE___
 target_link_libraries(test_thread sylar "${LIBS}")
+
+add_executable(test_util tests/test_util.cpp)
+add_dependencies(test_util sylar)
+target_link_libraries(test_util sylar "${LIBS}")
+
 
 #设置输出路径
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)

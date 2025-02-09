@@ -9,9 +9,6 @@
   */
 
 
-/*
- *
- */
 #include "../sylar/sylar.h"
 #include <unistd.h>
 

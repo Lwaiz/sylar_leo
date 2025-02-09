@@ -401,7 +401,7 @@ public:
     /**
      * @brief 返回配置变量的值
      */
-    const T getValue() const {
+    const T getValue() {
         RWMutexType::ReadLock lock(m_mutex);
         return m_val;
     }
