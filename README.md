@@ -553,6 +553,87 @@ RWMutex 类同时定义了 ReadLock 和 WriteLock 类型，分别表示局部的
 - `MainFunc()`: 协程执行的入口函数。
 - `CallMainFunc()`: 调度协程执行的函数。
 
+### 示例
+```cpp
+#include "../sylar/sylar.h"
+
+sylar::Logger::ptr g_logger = SYLAR_LOG_ROOT();
+
+void run_in_fiber() {
+    SYLAR_LOG_INFO(g_logger) << "run_in_fiber begin";
+    sylar::Fiber::YiledToHold();
+    SYLAR_LOG_INFO(g_logger) << "run_in_fiber end";
+    sylar::Fiber::YiledToHold();
+
+}
+
+void test_fiber() {
+    SYLAR_LOG_INFO(g_logger) << "main begin -1";
+    {
+        sylar::Fiber::GetThis();
+        SYLAR_LOG_INFO(g_logger) << "main begin";
+        sylar::Fiber::ptr fiber(new sylar::Fiber(run_in_fiber));
+        fiber->swapIn();
+        SYLAR_LOG_INFO(g_logger) << "main after swapIn";
+        fiber->swapIn();
+        SYLAR_LOG_INFO(g_logger) << "main after end";
+        fiber->swapIn();
+    }
+    SYLAR_LOG_INFO(g_logger) << "main after end 2";
+}
+
+int main(int argc, char** argv) {
+    sylar::Thread::SetName("main_thread ");
+
+    std::vector<sylar::Thread::ptr> thrs;
+    for(int i = 0; i < 3; ++i){
+        thrs.push_back(sylar::Thread::ptr(
+                new sylar::Thread(&test_fiber, "name_" + std::to_string(i))));
+    }
+    for(auto i : thrs){
+        i->join();
+    }
+
+    return 0;
+}
+```
+**测试结果**
+```shell
+2025-02-10 21:20:41	22351	name_0	0	[INFO]	[root]	</home/leo/CppProgram/sylar/tests/test_fiber.cpp:25>	main begin -1
+2025-02-10 21:20:41	22353	name_2	0	[INFO]	[root]	</home/leo/CppProgram/sylar/tests/test_fiber.cpp:25>	main begin -1
+2025-02-10 21:20:41	22352	name_1	0	[INFO]	[root]	</home/leo/CppProgram/sylar/tests/test_fiber.cpp:25>	main begin -1
+2025-02-10 21:20:41	22351	name_0	0	[DEBUG]	[system]	</home/leo/CppProgram/sylar/sylar/fiber.cpp:94>	Fiber::Fiber main
+2025-02-10 21:20:41	22353	name_2	0	[DEBUG]	[system]	</home/leo/CppProgram/sylar/sylar/fiber.cpp:94>	Fiber::Fiber main
+2025-02-10 21:20:41	22351	name_0	0	[INFO]	[root]	</home/leo/CppProgram/sylar/tests/test_fiber.cpp:28>	main begin
+2025-02-10 21:20:41	22353	name_2	0	[INFO]	[root]	</home/leo/CppProgram/sylar/tests/test_fiber.cpp:28>	main begin
+2025-02-10 21:20:41	22352	name_1	0	[DEBUG]	[system]	</home/leo/CppProgram/sylar/sylar/fiber.cpp:94>	Fiber::Fiber main
+2025-02-10 21:20:41	22353	name_2	0	[DEBUG]	[system]	</home/leo/CppProgram/sylar/sylar/fiber.cpp:127>	Fiber::Fiber id=2
+2025-02-10 21:20:41	22352	name_1	0	[INFO]	[root]	</home/leo/CppProgram/sylar/tests/test_fiber.cpp:28>	main begin
+2025-02-10 21:20:41	22353	name_2	2	[INFO]	[root]	</home/leo/CppProgram/sylar/tests/test_fiber.cpp:17>	run_in_fiber begin
+2025-02-10 21:20:41	22351	name_0	0	[DEBUG]	[system]	</home/leo/CppProgram/sylar/sylar/fiber.cpp:127>	Fiber::Fiber id=1
+2025-02-10 21:20:41	22353	name_2	0	[INFO]	[root]	</home/leo/CppProgram/sylar/tests/test_fiber.cpp:31>	main after swapIn
+2025-02-10 21:20:41	22352	name_1	0	[DEBUG]	[system]	</home/leo/CppProgram/sylar/sylar/fiber.cpp:127>	Fiber::Fiber id=3
+2025-02-10 21:20:41	22351	name_0	1	[INFO]	[root]	</home/leo/CppProgram/sylar/tests/test_fiber.cpp:17>	run_in_fiber begin
+2025-02-10 21:20:41	22353	name_2	2	[INFO]	[root]	</home/leo/CppProgram/sylar/tests/test_fiber.cpp:19>	run_in_fiber end
+2025-02-10 21:20:41	22351	name_0	0	[INFO]	[root]	</home/leo/CppProgram/sylar/tests/test_fiber.cpp:31>	main after swapIn
+2025-02-10 21:20:41	22352	name_1	3	[INFO]	[root]	</home/leo/CppProgram/sylar/tests/test_fiber.cpp:17>	run_in_fiber begin
+2025-02-10 21:20:41	22351	name_0	1	[INFO]	[root]	</home/leo/CppProgram/sylar/tests/test_fiber.cpp:19>	run_in_fiber end
+2025-02-10 21:20:41	22352	name_1	0	[INFO]	[root]	</home/leo/CppProgram/sylar/tests/test_fiber.cpp:31>	main after swapIn
+2025-02-10 21:20:41	22351	name_0	0	[INFO]	[root]	</home/leo/CppProgram/sylar/tests/test_fiber.cpp:33>	main after end
+2025-02-10 21:20:41	22352	name_1	3	[INFO]	[root]	</home/leo/CppProgram/sylar/tests/test_fiber.cpp:19>	run_in_fiber end
+2025-02-10 21:20:41	22353	name_2	0	[INFO]	[root]	</home/leo/CppProgram/sylar/tests/test_fiber.cpp:33>	main after end
+2025-02-10 21:20:41	22352	name_1	0	[INFO]	[root]	</home/leo/CppProgram/sylar/tests/test_fiber.cpp:33>	main after end
+2025-02-10 21:20:41	22351	name_0	0	[DEBUG]	[system]	</home/leo/CppProgram/sylar/sylar/fiber.cpp:153>	Fiber::~Fiber id=1 total=5
+2025-02-10 21:20:41	22352	name_1	0	[DEBUG]	[system]	</home/leo/CppProgram/sylar/sylar/fiber.cpp:153>	Fiber::~Fiber id=3 total=3
+2025-02-10 21:20:41	22351	name_0	0	[INFO]	[root]	</home/leo/CppProgram/sylar/tests/test_fiber.cpp:36>	main after end 2
+2025-02-10 21:20:41	22352	name_1	0	[INFO]	[root]	</home/leo/CppProgram/sylar/tests/test_fiber.cpp:36>	main after end 2
+2025-02-10 21:20:41	22353	name_2	0	[DEBUG]	[system]	</home/leo/CppProgram/sylar/sylar/fiber.cpp:153>	Fiber::~Fiber id=2 total=4
+2025-02-10 21:20:41	22351	name_0	0	[DEBUG]	[system]	</home/leo/CppProgram/sylar/sylar/fiber.cpp:153>	Fiber::~Fiber id=0 total=2
+2025-02-10 21:20:41	22353	name_2	0	[INFO]	[root]	</home/leo/CppProgram/sylar/tests/test_fiber.cpp:36>	main after end 2
+2025-02-10 21:20:41	22352	name_1	0	[DEBUG]	[system]	</home/leo/CppProgram/sylar/sylar/fiber.cpp:153>	Fiber::~Fiber id=0 total=1
+2025-02-10 21:20:41	22353	name_2	0	[DEBUG]	[system]	</home/leo/CppProgram/sylar/sylar/fiber.cpp:153>	Fiber::~Fiber id=0 total=0
+```
+
 ---
 
 ---
