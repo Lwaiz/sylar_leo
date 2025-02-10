@@ -18,6 +18,7 @@
 #include "singleton.h"
 #include "thread.h"
 #include "macro.h"
+#include "fiber.h"
 
 
 #endif //SYLAR_SYLAR_H

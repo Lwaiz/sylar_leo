@@ -37,7 +37,7 @@
                                 sylar::GetThreadId(),          \
                                 sylar::GetFiberId(),           \
                                 time(0),                       \
-                                "main_thread"))).getSS()
+                                sylar::Thread::GetName()))).getSS()
 /**
  * @brief 使用流方式将日志级别 debug，info，warn，error，fatal 的日志写到 logger
  */
@@ -62,7 +62,7 @@
         0, sylar::GetThreadId(),                     \
         sylar::GetFiberId(),                         \
         time(0),                                     \
-        "main_thread"))).getEvent()->format(fmt, __VA_ARGS__)
+        sylar::Thread::GetName()))).getEvent()->format(fmt, __VA_ARGS__)
 
 /**
  * @brief 使用 格式化 方式将日志级别 debug，info，warn，error，fatal 的日志写到 logger
