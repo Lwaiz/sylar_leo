@@ -1,4 +1,6 @@
-# Sylar-leo
+# Sylar_leo
+
+---
 
 ---
 
@@ -11,15 +13,13 @@
     - https://github.com/Lwaiz/sylar_leo/blob/master/Sylar_note.md
 
 
-```
-**2025.1.6**   Log系统
+- 学习进度
 
-**2025.1.15**  配置系统
-
-**2025.2.5**   线程模块
-
-**2025.2.9**   协程模块
-```
+  - 2025.1.6   日志系统  Logger
+  - 2025.1.15  配置系统  Config
+  - 2025.2.5   线程模块  Thread
+  - 2025.2.9   协程模块  Fiber
+  - 2025.2.11  协程调度模块 Scheduler
 
 ---
 
@@ -38,7 +38,7 @@ cmake version 3.22.1
 
 ---
 
-# Logger模块
+# 日志系统 Logger
 
 ---
 
@@ -234,7 +234,7 @@ int main() {
 
 ---
 
-# 配置系统
+# 配置系统 Config
 
 ---
 
@@ -368,7 +368,7 @@ std::cout << g_int_config->toString() << std::endl;
 ---
 
 ---
-# 线程模块 
+# 线程模块 Thread
 
 ---
 
@@ -498,7 +498,7 @@ RWMutex 类同时定义了 ReadLock 和 WriteLock 类型，分别表示局部的
 
 ---
 
-# 协程模块
+# 协程模块 Fiber
 
 ## 功能特性
 
@@ -552,6 +552,16 @@ RWMutex 类同时定义了 ReadLock 和 WriteLock 类型，分别表示局部的
 - `TotalFibers()`: 返回当前协程的总数。 
 - `MainFunc()`: 协程执行的入口函数。
 - `CallMainFunc()`: 调度协程执行的函数。
+
+---
+
+---
+
+# 协程调度模块 Scheduler
+
+
+
+
 
 
 
