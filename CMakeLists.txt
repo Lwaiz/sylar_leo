@@ -23,8 +23,9 @@ set(LIB_SRC
         sylar/config.cpp
         sylar/thread.cpp
         sylar/mutex.cpp
-        #sylar/macro.cpp
+        sylar/macro.cpp
         sylar/fiber.cpp
+        sylar/scheduler.cpp
         )
 
 #生成共享库
@@ -59,6 +60,11 @@ target_link_libraries(test_util sylar "${LIBS}")
 add_executable(test_fiber tests/test_fiber.cpp)
 add_dependencies(test_fiber sylar)
 target_link_libraries(test_fiber sylar "${LIBS}")
+
+add_executable(test_scheduler tests/test_scheduler.cpp)
+add_dependencies(test_scheduler sylar)
+target_link_libraries(test_scheduler sylar "${LIBS}")
+
 
 #设置输出路径
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)

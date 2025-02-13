@@ -640,7 +640,142 @@ int main(int argc, char** argv) {
 
 # 协程调度模块 Scheduler
 
+## 设计特点
 
+1. **协程调度**  
+   类中提供了协程调度的能力，并能够根据任务类型（协程或回调函数）将其调度到线程池中的线程执行。
+
+2. **线程池管理**  
+   通过线程池来管理多个协程执行的线程。可以动态调整空闲线程和活动线程的数量。
+
+3. **无锁调度**  
+   为了提高性能，`scheduleNoLock` 采用了无锁操作，减少锁的竞争。
+
+4. **空闲协程处理**  
+   当没有任务需要执行时，调度器可以执行一个“空闲”协程来保持线程池的活跃。
+
+
+## 核心逻辑
+
+![img.png](readme_img/scheduler.png)
+
+---
+
+* **use_caller = true**  
+  * 在主线程上创建调度协程，其中main主线程上有 1.main的主协程，2.调度协程，3.任务子协程
+![img_1.png](readme_img/usecaller.png)
+* **use_caller = false** 
+  * 新建一个调度线程，调度线程的主协程为调度协程，调度线程上有 1.调度协程，2.任务子协程
+![img.png](readme_img/no_usecaller.png)
+---
+
+## 核心组件
+
+### Scheduler 协程调度器类
+
+`Scheduler` 类是一个协程调度器的实现，主要功能是管理并调度多个协程任务的执行。它封装了协程的调度逻辑和线程池的管理，支持协程在线程池中切换。具体来说，类中包含以下几个主要部分：
+
+#### 1. 构造函数与析构函数
+
+- `Scheduler(size_t threads = 1, bool use_caller = true, const std::string& name = "")`  
+  构造一个调度器，可以指定线程数量、是否使用当前调用线程作为根线程以及调度器的名称。
+
+- `virtual ~Scheduler()`  
+  虚析构函数，用于释放资源。
+
+#### 2. 调度功能
+
+- `start()`  
+  启动调度器，开始协程调度。
+
+- `stop()`  
+  停止调度器。
+
+- `schedule(FiberOrCb fc, int thread = -1)`  
+  该函数将协程或回调函数 `fc` 调度到执行队列中，`thread` 参数指定在哪个线程执行，-1 表示可以在任意线程执行。此函数还支持批量调度。
+
+- `scheduleNoLock(FiberOrCb fc, int thread)`  
+  执行无锁调度，将一个协程或者回调函数加入执行队列。
+
+#### 3. 协程与线程的调度
+
+- `FiberAndThread`  
+  这是一个结构体，用于保存协程（`Fiber`）、回调函数（`cb`）以及指定线程的 ID（`thread`）。它有多个构造函数，用于支持不同的初始化方式。
+
+- `tickle()`  
+  通知调度器有任务需要执行。
+
+- `run()`  
+  执行调度任务。
+
+- `idle()`  
+  当没有任务可调度时执行的空闲协程。
+
+#### 4. 协程调度状态
+
+- `stopping()`  
+  检查调度器是否可以停止。
+
+- `setThis()`  
+  设置当前调度器。
+
+- `hasIdleThreads()`  
+  检查是否有空闲线程。
+
+#### 5. 成员变量
+
+- `m_threads`  
+  线程池中的所有线程。
+
+- `m_fibers`  
+  存储待执行的协程队列。
+
+- `m_rootFiber`  
+  根协程，当 `use_caller` 为 true 时，当前调用线程作为根协程。
+
+- `m_name`  
+  协程调度器的名称。
+
+- `m_threadIds`  
+  线程 ID 数组，表示每个线程执行的协程。
+
+- `m_activeThreadCount`  
+  正在执行任务的线程数量。
+
+- `m_idleThreadCount`  
+  空闲线程数量。
+
+- `m_stopping`  
+  标志调度器是否停止。
+
+- `m_autoStop`  
+  是否自动停止。
+
+- `m_rootThread`  
+  根线程 ID。
+
+#### 6. 线程池管理
+
+通过 `m_threads` 存储的线程池来管理多线程，协程调度是基于线程池的。每个线程可以执行多个协程任务。
+
+### 示例
+
+```cpp
+int main(int argc, char** argv) {
+    SYLAR_LOG_INFO(g_logger) << "main";
+    // 创建一个调度器，true 使用主线程创建调度协程; false 新建调度线程
+    sylar::Scheduler sc(2, false, "test");
+    // 启动调度器
+    sc.start();
+    sleep(2);
+    SYLAR_LOG_INFO(g_logger) << "schedule";
+    sc.schedule(&test_scheduler);
+    // 停止调度器
+    sc.stop();
+    SYLAR_LOG_INFO(g_logger) << "over";
+    return 0;
+}
+```
 
 
 

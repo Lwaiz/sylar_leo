@@ -13,7 +13,7 @@
 #include "config.h"
 #include "macro.h"
 #include "log.h"
-//#include "scheduler.h"
+#include "scheduler.h"
 #include <atomic>
 
 namespace sylar{
@@ -207,15 +207,15 @@ void Fiber::swapIn() {
     SYLAR_ASSERT(m_state != EXEC);
     m_state = EXEC;
     //从主协程切换到子协程执行
-    if(swapcontext(&(t_threadFiber)->m_ctx, &m_ctx)) {
+    if(swapcontext(&Scheduler::GetMainFiber()->m_ctx, &m_ctx)) {
         SYLAR_ASSERT2(false, "swapcontext");
     }
 }
 
 ///切换到主协程 （子协程切换到后台）
 void Fiber::swapOut() {
-    SetThis(t_threadFiber.get());
-    if(swapcontext(&m_ctx, &t_threadFiber->m_ctx)) {
+    SetThis(Scheduler::GetMainFiber());
+    if(swapcontext(&m_ctx, &Scheduler::GetMainFiber()->m_ctx)) {
         SYLAR_ASSERT2(false, "swapcontext");
     }
 }
