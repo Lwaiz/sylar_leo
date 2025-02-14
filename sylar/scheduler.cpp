@@ -89,7 +89,7 @@ void Scheduler::start() {
 
     // 创建调度线程池
     m_threads.resize(m_threadCount);
-    // 为每个线程创建一个新线程，执行调度器的 run 方法
+    // 根据线程池大小 为每个线程创建一个新线程，执行调度器的 run 方法
     for(size_t i = 0; i < m_threadCount; ++i){
         m_threads[i].reset(new Thread(std::bind(&Scheduler::run, this)
                             , m_name + "_" + std::to_string(i)));
@@ -97,6 +97,7 @@ void Scheduler::start() {
     }
     lock.unlock();
 }
+
 
 void Scheduler::stop(){
     // 设置自动停止标志，表示调度器会在适当的时候停止
@@ -202,7 +203,7 @@ void Scheduler::run(){
                 // 找到一个可执行的协程
                 ft = *it;
                 m_fibers.erase(it++);  // 从队列中移除
-                ++m_activeThreadCount;  // 活跃线程数加1
+                ++m_activeThreadCount;  // 活跃线程数加 1
                 is_active = true;
                 break;
             }
@@ -239,7 +240,7 @@ void Scheduler::run(){
             }
             ft.reset();  // 重置协程和线程信息
             cb_fiber->swapIn();  // 执行回调协程
-            --m_activeThreadCount;  // 活跃线程数减1
+            --m_activeThreadCount;  // 活跃线程数减 1
 
             // 重新调用协程
             if(cb_fiber->getState() == Fiber::READY) {

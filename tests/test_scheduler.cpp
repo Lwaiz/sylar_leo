@@ -25,11 +25,14 @@ void test_scheduler(){
 
 int main(int argc, char** argv) {
     SYLAR_LOG_INFO(g_logger) << "main";
+    // 创建调度器
     sylar::Scheduler sc(2, false, "test");
+    // 启动调度器 初始化调度线程池
     sc.start();
     sleep(2);
     SYLAR_LOG_INFO(g_logger) << "schedule";
     sc.schedule(&test_scheduler);
+    // 停止调度器
     sc.stop();
     SYLAR_LOG_INFO(g_logger) << "over";
     return 0;

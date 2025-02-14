@@ -87,7 +87,7 @@ public:
     void swapOut();
 
     /**
-     * @brief 将当前协程协程切换到执行状态
+     * @brief 将当前协程切换到执行状态
      * @pre   执行 当前线程的主协程
      */
     void call();

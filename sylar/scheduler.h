@@ -270,10 +270,6 @@ protected:
 
 
 
-
-
-
-
 }
 
 #endif //SYLAR_SCHEDULER_H
