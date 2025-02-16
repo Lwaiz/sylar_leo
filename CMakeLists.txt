@@ -26,6 +26,7 @@ set(LIB_SRC
         sylar/macro.cpp
         sylar/fiber.cpp
         sylar/scheduler.cpp
+        sylar/iomanager.cpp
         )
 
 #生成共享库
@@ -65,6 +66,9 @@ add_executable(test_scheduler tests/test_scheduler.cpp)
 add_dependencies(test_scheduler sylar)
 target_link_libraries(test_scheduler sylar "${LIBS}")
 
+add_executable(test_iomanager tests/test_iomanager.cpp)
+add_dependencies(test_iomanager sylar)
+target_link_libraries(test_iomanager sylar "${LIBS}")
 
 #设置输出路径
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)

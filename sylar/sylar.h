@@ -20,6 +20,7 @@
 #include "macro.h"
 #include "fiber.h"
 #include "scheduler.h"
+#include "iomanager.h"
 
 
 #endif //SYLAR_SYLAR_H

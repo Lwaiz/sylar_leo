@@ -816,6 +816,90 @@ int main(int argc, char** argv) {
 }
 ```
 
+---
+
+---
+
+# IO协程调度模块 IOManager
+
+---
+
+## 设计概述
+`IOManager` 使用 Epoll 提供的高效 I/O 多路复用机制，允许程序在多个文件描述符（如 socket）上监听 I/O 事件。当 I/O 事件发生时，相应的回调函数或协程会被调度执行。每个文件描述符关联一个 `FdContext`，并为每种事件（读、写）维护一个事件上下文，记录相关的协程和回调函数。
+
+通过协程调度机制，`IOManager` 可以处理大量的并发 I/O 操作，而不会阻塞主线程，提供高效的异步 I/O 支持。
+
+---
+## 核心机制
+
+`IOManager` 的核心机制是通过 Epoll 实现 I/O 多路复用。当 I/O 事件发生时，Epoll 会通知 `IOManager`，然后 `IOManager` 根据事件类型执行相应的回调函数或协程。它将每个文件描述符的事件与一个事件上下文（`FdContext`）关联起来，并通过协程调度来处理这些事件。
+
+1. 事件的注册和处理：
+- `addEvent`：向 Epoll 注册事件，将文件描述符与事件（如读、写）及其回调函数关联。
+- `delEvent` 和 `cancleEvent`：用于取消或删除已注册的事件，并触发相应的回调。
+
+2. Epoll 事件的通知与调度：
+- 当事件发生时，`IOManager` 会触发相应的回调函数或协程，处理具体的 I/O 操作。
+- 通过协程调度（`Fiber`），避免阻塞操作，提升并发性能。
+
+3. 调度和协程切换：
+- 每当 I/O 事件发生时，会从调度队列中取出相应的协程，并执行它。
+- 协程的状态通过 Fiber 对象管理，根据事件的完成情况决定是否继续执行或切换到其他任务。
+
+## 主要结构和方法解析
+
+### 1. **`Event` 枚举**
+`Event` 枚举定义了支持的事件类型：
+- `NONE`：无事件
+- `READ`：读事件（EPOLLIN）
+- `WRITE`：写事件（EPOLLOUT）
+
+### 2. **`FdContext` 类**
+`FdContext` 类用于管理每个文件描述符（如 socket）的事件上下文。它包含：
+- **`fd`**：文件描述符
+- **`events`**：当前事件类型
+- **`read` 和 `write`**：分别表示读事件和写事件的上下文。
+
+#### `EventContext` 内部类
+`EventContext` 用于描述与某个事件（读或写）相关的调度器、协程（Fiber）和回调函数：
+- **`scheduler`**：事件执行的调度器
+- **`fiber`**：事件关联的协程
+- **`cb`**：事件的回调函数
+
+#### 方法：
+- **`getContext(Event event)`**：根据事件类型（读或写）返回对应的事件上下文。
+- **`resetContext(EventContext& ctx)`**：重置事件上下文。
+- **`triggerEvent(Event event)`**：触发事件并执行回调。
+
+### 3. **`IOManager` 类**
+`IOManager` 类继承自 `Scheduler`，用于管理与文件描述符相关的 I/O 事件的调度。它通过 Epoll 提供的事件机制实现异步 I/O 操作。
+
+#### 构造函数：
+- `IOManager(size_t threads = 1, bool use_caller = true, const std::string& name = "")`：初始化调度器，设置线程数和调度器名称。
+
+#### 主要方法：
+- **`addEvent(int fd, Event event, std::function<void()> cb = nullptr)`**：添加事件，指定文件描述符、事件类型和回调函数。
+- **`delEvent(int fd, Event event)`**：删除指定文件描述符的事件，不会触发回调。
+- **`cancleEvent(int fd, Event event)`**：取消指定事件，触发回调。
+- **`cancleAll(int fd)`**：取消所有与文件描述符相关的事件。
+- **`GetThis()`**：返回当前的 IOManager 实例。
+
+#### 保护方法：
+- **`tickle()`**：覆盖 `Scheduler` 中的 `tickle()` 方法，用于唤醒调度器。
+- **`stopping()`**：覆盖 `Scheduler` 中的 `stopping()` 方法，检查调度器是否在停止过程中。
+- **`idle()`**：覆盖 `Scheduler` 中的 `idle()` 方法，处理空闲协程。
+
+#### 私有方法：
+- **`contextResize(size_t size)`**：调整 socket 事件上下文容器的大小。
+
+### 4. **成员变量**
+- **`m_epfd`**：epoll 文件描述符。
+- **`m_tickleFds`**：用于唤醒调度器的 pipe 文件描述符，`fd[0]` 读端，`fd[1]` 写端。
+- **`m_pendingEventCount`**：当前待处理的事件数量。
+- **`m_mutex`**：用于访问共享资源的读写锁。
+- **`m_fdContexts`**：存储每个文件描述符的事件上下文。
+
+
 
 
 

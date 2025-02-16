@@ -104,7 +104,8 @@ public:
             MutexType::Lock lock(m_mutex);
             while(begin != end){
                 //更新 need_tickle 若为true，说明有协程被调度
-                need_tickle = scheduleNoLock(&*begin) || need_tickle;
+                need_tickle = scheduleNoLock(&*begin, -1) || need_tickle;
+                ++begin;
             }
         }
         if(need_tickle){
