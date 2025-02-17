@@ -21,7 +21,7 @@
   - 2025.2.9   协程模块  Fiber
   - 2025.2.11  协程调度模块 Scheduler
   - 2025.2.14  IO协程调度模块 IOManager
-
+  - 2025.2.16  定时器模块 Timer (2.17 finish)
 ---
 
 # 开发环境
@@ -899,8 +899,80 @@ int main(int argc, char** argv) {
 - **`m_mutex`**：用于访问共享资源的读写锁。
 - **`m_fdContexts`**：存储每个文件描述符的事件上下文。
 
+---
 
+---
 
+# 定时器模块 Timer
+
+## **设计与功能**
+
+### **定时器管理**
+`TimerManager` 类维护一个按执行时间排序的定时器集合。通过 `addTimer` 和 `addConditionTimer` 方法，用户可以方便地添加定时器。条件定时器支持在满足某个条件时执行。
+
+### **循环与单次定时器**
+每个定时器可以是单次定时器或循环定时器。循环定时器在执行后会重新设置执行时间，从而实现定时器的重复执行。
+
+### **定时器精确控制**
+每个定时器都有一个精确的执行时间戳（`m_next`），确保定时器的执行时间是准确的。
+
+### **定时器回调**
+每个定时器都关联一个回调函数，定时器到期时会触发该回调。
+
+### **时间滚动检测**
+`detectClockRollover` 方法检测服务器时间是否被修改。如果时间回退，将进行相应的处理。
+
+### **线程安全**
+使用 `RWMutex` 确保定时器集合的访问是线程安全的。
+
+---
+
+## 1. **Timer 类**
+
+### **成员变量**
+- `m_recurring`：是否为循环定时器。
+- `m_ms`：定时器的执行间隔时间（单位：毫秒）。
+- `m_next`：定时器的执行时间戳（即精确的执行时间）。
+- `m_cb`：定时器的回调函数。
+- `m_manager`：定时器的管理器，指向 `TimerManager`。
+
+### **成员函数**
+- `cancle()`：取消定时器（可能是拼写错误，应为 `cancel()`）。
+- `refresh()`：刷新定时器的执行时间。
+- `reset(uint64_t ms, bool from_now)`：重置定时器的时间，接收新的执行间隔时间（毫秒）和是否从当前时间开始计算。
+- 构造函数：
+  - `Timer(uint64_t ms, std::function<void()> cb, bool recurring, TimerManager* manager)`：构造定时器。
+  - `Timer(uint64_t next)`：构造定时器，接收执行时间戳。
+
+### **内部结构**
+- `Comparator`：定时器的比较仿函数，按执行时间排序定时器。
+
+---
+
+## 2. **TimerManager 类**
+
+### **成员变量**
+- `m_mutex`：读写锁类型，保护定时器的并发访问。
+- `m_timers`：存储定时器的 `std::set`，按定时器的执行时间排序。
+- `m_tickled`：标志是否触发 `onTimerInsertedAtFront()` 回调函数。
+- `m_previouseTime`：上次执行定时器的时间，用于检测时间滚动。
+
+### **成员函数**
+- `addTimer(uint64_t ms, std::function<void()> cb, bool recurring = false)`：添加定时器，接收间隔时间、回调函数和是否循环的参数。
+- `addConditionTimer(uint64_t ms, std::function<void()> cb, std::weak_ptr<void> weak_cond, bool recurring = false)`：添加条件定时器，接收间隔时间、回调函数、条件和是否循环的参数。
+- `getNextTimer()`：获取距离下一个定时器执行的间隔时间。
+- `listExpiredCb(std::vector<std::function<void()>>& cbs)`：获取已过期的定时器回调函数。
+- `hasTimer()`：检查是否有定时器存在。
+
+### **纯虚函数**
+- `onTimerInsertedAtFront()`：当新的定时器插入到定时器队列的前端时触发。
+
+### **内部函数**
+- `addTimer(Timer::ptr val, RWMutexType::WriteLock& lock)`：将定时器添加到 `m_timers` 集合中，并加锁保护。
+
+---
+
+---
 
 
 

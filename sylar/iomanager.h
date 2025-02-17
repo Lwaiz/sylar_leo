@@ -13,10 +13,11 @@
 #define SYLAR_IOMANAGER_H
 
 #include "scheduler.h"
+#include "timer.h"
 
 namespace sylar {
 
-class IOManager : public Scheduler {
+class IOManager : public Scheduler , public TimerManager {
 public:
     typedef std::shared_ptr<IOManager> ptr;
     typedef RWMutex RWMutexType;
@@ -135,7 +136,7 @@ protected:
     void tickle() override;
     bool stopping() override;
     void idle() override;
-    //void onTimerInsertedAtFront() override;
+    void onTimerInsertedAtFront() override;
 
     /**
      * @brief 重置 socket 句柄上下文的容器大小
@@ -143,7 +144,11 @@ protected:
      */
     void contextResize(size_t size);
 
-
+    /**
+     * @brief 判断是否可以停止
+     * @param timeout 最近要触发的定时器事件间隔
+     */
+    bool stopping(uint64_t& timeout);
 private:
     /// epoll 文件句柄
     int m_epfd = 0;

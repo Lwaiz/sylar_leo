@@ -27,6 +27,8 @@ set(LIB_SRC
         sylar/fiber.cpp
         sylar/scheduler.cpp
         sylar/iomanager.cpp
+        sylar/timer.cpp
+
         )
 
 #生成共享库

@@ -399,9 +399,12 @@ void IOManager::tickle(){
     SYLAR_ASSERT(rt == 1);
 }
 
-//bool IOManager::stopping(uint64_t& timeout) {
-//    timeout =
-//}
+bool IOManager::stopping(uint64_t& timeout) {
+    timeout = getNextTimer();
+    return timeout == ~0ull
+        && m_pendingEventCount == 0
+        && Scheduler::stopping();
+}
 
 bool IOManager::stopping() {
     return Scheduler::stopping()      // 自动停止 / 正在停止 / 子协程为空 / 无活跃线程
@@ -435,8 +438,9 @@ void IOManager::idle(){
 
     /// 1.循环等待事件
     while(true) {
+        uint64_t next_timeout = 0;
         // 判断调度器是否停止
-        if(stopping()){
+        if(stopping(next_timeout)){
             SYLAR_LOG_INFO(g_logger) << "name=" << getName()
                                      << " idle stopping exit";
             break;
@@ -447,8 +451,16 @@ void IOManager::idle(){
         do {
             // 默认超时时间为5秒
             static const int MAX_TIMEOUT = 3000;
+
+            if(next_timeout != ~0ull) {
+                next_timeout = (int) next_timeout > MAX_TIMEOUT
+                        ? MAX_TIMEOUT : next_timeout;
+            } else {
+                next_timeout = MAX_TIMEOUT;
+            }
+
             // 等待事件发生，返回发生事件数量，-1 出错， 0 超时
-            rt = epoll_wait(m_epfd, events, 64, MAX_TIMEOUT);
+            rt = epoll_wait(m_epfd, events, MAX_EVENTS, (int)next_timeout);
 
             // 如果是中断，继续等待
             if(rt < 0 && errno == EINTR){
@@ -457,12 +469,12 @@ void IOManager::idle(){
             }
         } while(true);
 
-//        std::vector<std::function<void()>> cbs;
-//        //listExpiredCb(cbs);
-//        if(!cbs.empty()) {
-//            schedule(cbs.begin(), cbs.end());
-//            cbs.clear();
-//        }
+        std::vector<std::function<void()>> cbs;
+        listExpiredCb(cbs);
+        if(!cbs.empty()) {
+            schedule(cbs.begin(), cbs.end());
+            cbs.clear();
+        }
 
         /// 2.处理所有发生的事件
 
@@ -539,6 +551,8 @@ void IOManager::idle(){
     }
 }
 
-//void IOManager::
+void IOManager::onTimerInsertedAtFront() {
+    tickle();
+}
 
 }
