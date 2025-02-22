@@ -36,9 +36,21 @@ namespace sylar {
 
 }
 
-extern "C" {
+/// 按 C语言规则进行编译
+extern "C" {     // 确保C++ 编译器不会对函数名进行名称修饰（name mangling），从而能够正确链接到 C 语言的函数
 
 /// sleep 用于让进程休眠指定的时间
+
+/**
+ * @brief 示例解释
+ *  sleep_fun 函数指针类型，指向 sleep 函数的原始实现
+ *      sleep函数原型为 unsigned int sleep(unsigned int seconds)
+ *  sleep_f 外部变量，用于保存原始 sleep 函数的地址
+ *      在 hook 实现中，可以通过 sleep_f 调用 sleep 函数
+ *  实现机制：
+ *    通过 dlsym(RTLD_NEXT, "函数名") 获取原始系统调用的地址，并将其赋值给对应的函数指针。
+ *    在自定义的 Hook 函数中，可以根据需要决定是否调用原始系统调用。
+ */
 typedef unsigned int (*sleep_fun)(unsigned int seconds);
 extern sleep_fun sleep_f;
 

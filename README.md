@@ -1063,7 +1063,82 @@ sylar还增加了一个connect_with_timeout接口用于实现带超时的connect
 ### 7. 自定义函数
 - connect_with_timeout：支持超时控制的 connect 函数。
 
+## 实现机制
 
+### sleep()函数 hook示例解释
 
+**定义原始函数指针**
+
+```cpp
+extern "C" { 
+    typedef unsigned int (*sleep_fun)(unsigned int seconds);
+    extern sleep_fun sleep_f;
+}
+```
+*  sleep_fun 函数指针类型，指向 sleep 函数的原始实现
+     -     sleep函数原型为 unsigned int sleep(unsigned int seconds)
+*  sleep_f 外部变量，用于保存原始 sleep 函数的地址 
+   -       在 hook 实现中，可以通过 sleep_f 调用 sleep 函数
+
+**实现机制：**
+
+```cpp
+#define HOOK_FUN(XX) \
+    XX(sleep) 
+
+/// 获取接口原始地址 (通过封装到一个结构体的构造函数中保证在main函数运行前完成)
+void hook_init() {
+    static bool is_inited = false;
+    if(is_inited){
+        return;
+    }
+// dlsym - 从一个动态链接库或者可执行文件中获取到符号地址。成功返回跟name关联的地址
+// RTLD_NEXT 返回第一个匹配到的 "name" 的函数地址
+// 取出原函数，赋值给新函数
+#define XX(name) name ## _f = (name ## _fun)dlsym(RTLD_NEXT, #name);
+    HOOK_FUN(XX);
+#undef XX
+}
+```
+*    通过 dlsym(RTLD_NEXT, "函数名") 获取原始系统调用的地址，并将其赋值给对应的函数指针。
+
+*    在自定义的 Hook 函数中，可以根据需要决定是否调用原始系统调用。
+
+**sleep()函数的替换实现**
+
+```cpp
+unsigned int sleep(unsigned int seconds){
+    if(!sylar::t_hook_enable) {
+        return sleep_f(seconds);
+    }
+
+    sylar::Fiber::ptr fiber = sylar::Fiber::GetThis();
+    sylar::IOManager* iom = sylar::IOManager::GetThis();
+    // bind() 需要先确定 schedule 函数的类型
+    iom->addTimer(seconds * 1000, std::bind((void(sylar::Scheduler::*)
+                        (sylar::Fiber::ptr, int thread))&sylar::IOManager::schedule,
+                  iom, fiber, -1));
+    sylar::Fiber::YiledToHold();
+    return 0;
+}
+```
+- 如果启用hook机制：创建一个定时器，并让出执行权，等到定时器超时 再返回来唤醒协程
+     
+### IO操作核心函数 do_io()
+
+- do_io 是一个模板函数，用于封装 I/O 操作（如 read、write）。
+
+- 如果不需要 Hook，直接调用原始函数。
+
+- 如果资源暂时不可用（EAGAIN），则挂起当前协程，并设置定时器。
+
+- 当事件触发或超时时，唤醒协程并继续执行。
+
+### connect() 函数
+- 如果启用 Hook，则尝试连接。
+
+- 如果连接未完成（EINPROGRESS），则挂起当前协程，并设置定时器。
+
+- 当连接完成或超时时，唤醒协程并返回结果
 
 
