@@ -25,7 +25,7 @@
  | 2025.2.14 | IO协程调度模块 [IOManager](#IO协程调度模块-IOManager) |
  | 2025.2.16 | 定时器模块 [Timer](#定时器模块-timer) (2.17 finish) |
  | 2025.2.21 | Hook模块 [Hook](#Hook模块-hook)               |
- | 2025.2.23 | 网络模块                                      |
+ | 2025.2.23 | 网络模块  [Socket](#网络模块-Socket)              |
  |           |                                           |
 ---
 
@@ -1013,55 +1013,55 @@ sylar还增加了一个connect_with_timeout接口用于实现带超时的connect
 以下是 Sylar Hook 库支持的部分系统调用及其自定义实现：
 
 ### 1. 时间相关
-- sleep：休眠指定的秒数。
+- `sleep`：休眠指定的秒数。
 
-- usleep：休眠指定的微秒数。
+- `usleep`：休眠指定的微秒数。
 
-- nanosleep：休眠指定的纳秒数。
+- `nanosleep`：休眠指定的纳秒数。
 
 ### 2. 套接字相关
-- socket：创建一个套接字。
+- `socket`：创建一个套接字。
 
-- connect：连接到远程服务器。
+- `connect`：连接到远程服务器。
 
-- accept：接受客户端连接。
+- `accept`：接受客户端连接。
 
-- close：关闭文件描述符。
+- `close`：关闭文件描述符。
 
 ### 3. 读取相关
-- read：从文件描述符读取数据。
+- `read`：从文件描述符读取数据。
 
-- readv：从文件描述符读取数据到多个缓冲区。
+- `readv`：从文件描述符读取数据到多个缓冲区。
 
-- recv：从套接字接收数据。
+- `recv`：从套接字接收数据。
 
-- recvfrom：从套接字接收数据并获取发送方地址。
+- `recvfrom`：从套接字接收数据并获取发送方地址。
 
-- recvmsg：从套接字接收数据并支持复杂控制选项。
+- `recvmsg`：从套接字接收数据并支持复杂控制选项。
 
 ### 4. 写入相关
-- write：向文件描述符写入数据。
+- `write`：向文件描述符写入数据。
 
-- writev：向文件描述符写入多个缓冲区的数据。
+- `writev`：向文件描述符写入多个缓冲区的数据。
 
-- send：向套接字发送数据。
+- `send`：向套接字发送数据。
 
-- sendto：向套接字发送数据并指定目标地址。
+- `sendto`：向套接字发送数据并指定目标地址。
 
-- sendmsg：向套接字发送多个缓冲区的数据。
+- `sendmsg`：向套接字发送多个缓冲区的数据。
 
 ### 5. I/O 控制相关
-- fcntl：对文件描述符进行控制操作。
+- `fcntl`：对文件描述符进行控制操作。
 
-- ioctl：对设备进行操作和控制。
+- `ioctl`：对设备进行操作和控制。
 
 ### 6. 套接字选项相关
-- getsockopt：获取套接字选项。
+- `getsockopt`：获取套接字选项。
 
-- setsockopt：设置套接字选项。
+- `setsockopt`：设置套接字选项。
 
 ### 7. 自定义函数
-- connect_with_timeout：支持超时控制的 connect 函数。
+- `connect_with_timeout`：支持超时控制的 connect 函数。
 
 ## 实现机制
 
@@ -1142,3 +1142,4 @@ unsigned int sleep(unsigned int seconds){
 - 当连接完成或超时时，唤醒协程并返回结果
 
 
+# 网络模块 Socket
