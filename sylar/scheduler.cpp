@@ -12,6 +12,7 @@
 #include "scheduler.h"
 #include "log.h"
 #include "macro.h"
+#include "hook.h"
 
 namespace sylar {
 
@@ -162,6 +163,7 @@ void Scheduler::setThis() {
  */
 void Scheduler::run(){
     SYLAR_LOG_DEBUG(g_logger) << m_name << " run";
+    set_hook_enable(true);
     // 设置当前调度器为全局调度器
     setThis();
     // 如果当前线程不是根线程，则将 t_scheduler_fiber 设置为当前协程

@@ -75,7 +75,7 @@ public:
      * @brief 单个协程调度
      * @details 将一个协程或回调函数 调度到执行队列中，并通知调度器执行
      * @param fc 协程或者函数
-     * @param thread 协程执行的线程id ，-1标识任意线程
+     * @param thread 协程执行的线程id ，-1标识 任意线程
      */
     template<class FiberOrCb>
     void schedule(FiberOrCb fc, int thread = -1){
@@ -103,7 +103,7 @@ public:
         {
             MutexType::Lock lock(m_mutex);
             while(begin != end){
-                //更新 need_tickle 若为true，说明有协程被调度
+                //更新 need_tickle 若为 true，说明有协程被调度
                 need_tickle = scheduleNoLock(&*begin, -1) || need_tickle;
                 ++begin;
             }
@@ -126,7 +126,7 @@ private:
         // 队列为空，唤醒调度器并传入协程
         // 队列不为空，已有协程任务，无需立即唤醒调度器
         bool need_tickle = m_fibers.empty();
-        FiberAndThread ft(fc, thread);  //保存协程对象和线程信息
+        FiberAndThread ft(fc, thread);  // 保存协程对象和线程信息
         // 有效协程或回调函数 则加入队列
         if(ft.fiber || ft.cb) {
             m_fibers.push_back(ft);

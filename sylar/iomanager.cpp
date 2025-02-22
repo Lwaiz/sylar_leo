@@ -112,7 +112,7 @@ IOManager::IOManager(size_t threads, bool use_caller, const std::string &name)
 IOManager::~IOManager(){
     // 停止调度器
     stop();
-    close(m_epfd); // 关闭epoll句柄
+    close(m_epfd);         // 关闭epoll句柄
     close(m_tickleFds[0]); // 关闭 pipe 读端
     close(m_tickleFds[1]); // 关闭 pipe 写端
 
@@ -509,7 +509,7 @@ void IOManager::idle(){
             //不是读写事件 则跳过
             if((fd_ctx->events & real_events) == NONE){ continue; }
 
-            /// 3.更新epoll事件
+            /// 3.更新 epoll 事件
 
             // 剔除已经发生的事件 将剩余事件重新加入 epoll_wait
             int left_events = (fd_ctx->events & ~real_events);

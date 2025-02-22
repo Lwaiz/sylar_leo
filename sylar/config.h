@@ -435,7 +435,7 @@ public:
      * @param key 回调函数 唯一 ID
      * @param cb  回调函数
      */
-    uint64_t addListener(on_change_cb  cb){
+    uint64_t addListener(on_change_cb cb){
         static uint64_t s_fun_id = 0;
         RWMutexType::WriteLock lock(m_mutex);
         ++s_fun_id;

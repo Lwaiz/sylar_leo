@@ -87,6 +87,7 @@ private:
     };
 };
 
+
 class TimerManager {
     friend class Timer;
 public:
@@ -129,13 +130,13 @@ public:
     uint64_t getNextTimer();
 
     /**
-     * @brief 获取需要执行的定时器回调函数列表
+     * @brief 获取需要执行（过期）的定时器回调函数列表
      * @param cbs 回调函数数组
      */
     void listExpiredCb(std::vector<std::function<void()>>& cbs);
 
     /**
-     * @brief 是否有定时器
+     * @brief 检查是否有定时器
      */
     bool hasTimer();
 
@@ -146,7 +147,7 @@ protected:
     virtual void onTimerInsertedAtFront() = 0;
 
     /**
-     * @brief 将定时器添加到管理器中
+     * @brief 将定时器添加到管理器 m_timers 集合中
      * @param val
      * @param lock
      */
@@ -162,9 +163,9 @@ private:
     RWMutexType m_mutex;
     /// 定时器集合
     std::set<Timer::ptr, Timer::Comparator> m_timers;
-    /// 是否触发 onTimerInsertedAtFront()
+    /// 是否触发 onTimerInsertedAtFront() 回调函数
     bool m_tickled = false;
-    /// 上次执行时间
+    /// 上次执行时间，用于检测时间滚动
     uint64_t m_previouseTime = 0;
 };
 

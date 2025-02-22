@@ -28,7 +28,8 @@ set(LIB_SRC
         sylar/scheduler.cpp
         sylar/iomanager.cpp
         sylar/timer.cpp
-
+        sylar/hook.cpp
+        sylar/fd_manager.cpp
         )
 
 #生成共享库
@@ -36,6 +37,7 @@ add_library(sylar SHARED ${LIB_SRC})
 
 set(LIBS
         sylar
+        dl
         pthread
         yaml-cpp
 )
@@ -71,6 +73,10 @@ target_link_libraries(test_scheduler sylar "${LIBS}")
 add_executable(test_iomanager tests/test_iomanager.cpp)
 add_dependencies(test_iomanager sylar)
 target_link_libraries(test_iomanager sylar "${LIBS}")
+
+add_executable(test_hook tests/test_hook.cpp)
+add_dependencies(test_hook sylar)
+target_link_libraries(test_hook sylar "${LIBS}")
 
 #设置输出路径
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
