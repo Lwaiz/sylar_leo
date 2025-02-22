@@ -1028,7 +1028,7 @@ sylar还增加了一个connect_with_timeout接口用于实现带超时的connect
 
 - close：关闭文件描述符。
 
-###3. 读取相关
+### 3. 读取相关
 - read：从文件描述符读取数据。
 
 - readv：从文件描述符读取数据到多个缓冲区。

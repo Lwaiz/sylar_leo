@@ -69,7 +69,7 @@ void test_sock(){
     if(rt <= 0) {return;}
 
     buff.resize(rt);
-    //SYLAR_LOG_INFO(g_logger) << buff;
+    SYLAR_LOG_INFO(g_logger) << buff;
 
 }
 
