@@ -37,7 +37,7 @@ namespace sylar {
 }
 
 /// 按 C语言规则进行编译
-extern "C" {     // 确保C++ 编译器不会对函数名进行名称修饰（name mangling），从而能够正确链接到 C 语言的函数
+extern "C" {      // 确保C++ 编译器不会对函数名进行名称修饰（name mangling），从而能够正确链接到 C 语言的函数
 
 /// sleep 用于让进程休眠指定的时间
 

@@ -23,10 +23,11 @@
  | 2025.2.9  | 协程模块 [Fiber](#协程模块-fiber)                 |
  | 2025.2.11 | 协程调度模块 [Scheduler](#协程调度模块-scheduler)     |
  | 2025.2.14 | IO协程调度模块 [IOManager](#IO协程调度模块-IOManager) |
- | 2025.2.16 | 定时器模块 [Timer](#定时器模块-timer) (2.17 finish) |
+ | 2025.2.16 | 定时器模块 [Timer](#定时器模块-timer)               |
  | 2025.2.21 | Hook模块 [Hook](#Hook模块-hook)               |
- | 2025.2.23 | 网络模块  [Socket](#网络模块-Socket)              |
- |           |                                           |
+ | 2025.2.23 | 地址模块 [Address](#网络地址模块-address)           |
+ | 2025.2.24 | 网络模块  [Socket](#网络模块-Socket)              |
+ | 2025.2.   | 序列化模块 [ByteArray](#序列化模块-ByteArray)                |
 ---
 
 
@@ -1141,5 +1142,118 @@ unsigned int sleep(unsigned int seconds){
 
 - 当连接完成或超时时，唤醒协程并返回结果
 
+---
+
+---
+
+# 网络地址模块 Address
+
+## 概述
+
+- `class Address`：基类，抽象类，对应sockaddr类型。提供获取地址的方法，以及一些基础操作的纯虚函数。
+- `class IPAddress`：继承Address，抽象类。提供关于IP操作的纯虚函数。
+- `class IPv4Address`：继承IPAddress，对应sockaddr_in类型。一个IPv4地址。
+- `class IPv6Address`：继承IPAddress，对应sockaddr_in6类型。一个IPv6地址。
+- `class UinxAddress`：继承Address，Unix域套接字类，对应sockaddr_un类型。一个Unix地址。
+- `class UnknowAddress`：继承Address，对应sockaddr类型。未知地址。
+
+## 主要功能
+- **地址查找**：支持通过主机名、地址族、协议类型等查找地址信息。
+- **接口地址查询**：可以查询本机所有网卡的地址以及指定网卡的地址。
+- **广播地址和网段地址**：可以计算给定 IP 地址的广播地址和网段地址。
+- **子网掩码计算**：根据给定的前缀长度（prefix_len）计算子网掩码。
+- **端口号处理**：支持获取和设置 IP 地址的端口号。
+- **地址比较**：重载了小于、等于和不等于运算符，支持地址的比较。
+
+---
+
+## 具体实现
+
+### Address 类
+`Address` 类是一个抽象基类，用于表示不同类型的网络地址。该类包含多个静态方法，用于从 `sockaddr` 指针或主机名创建地址对象。它还提供了虚方法来获取套接字地址信息。
+
+- **静态方法**：
+  - `Create()`: 通过 `sockaddr` 指针创建具体的 `Address` 地址对象
+  - `Lookup()`: 查找给定主机的第一个匹配地址
+  - `LookupAny()`：查找给定主机的所有匹配地址，并将结果保存到 result 中
+  - `GetInterfaceAddresses`: 获取本机(所有|指定)网络接口的地址信息
+- **虚方法**：
+  - `getAddr()`：获取网络地址。
+  - `getAddrLen()`：获取地址长度。
+  - `toString()`：将地址转换为字符串。
+  - `insert()` : 将地址格式化为字符串输出到流
+- **操作符重载**：
+  - `==`, `<`, `!=`：用于地址比较。
+
+### IPAddress 类
+`IPAddress` 类继承自 `Address`，用于表示 IP 地址。它提供了多种方法，用于获取与 IP 地址相关的信息，如广播地址、网段地址和子网掩码。
+
+- `Create()`: 通过 IP 地址字符串和端口号创建 `IPAddress` 对象
+- `getBroadcastAddress()`: 获取广播地址。
+- `getNetworkAddress()`: 获取网段地址。
+- `getSubnetMask()`: 获取子网掩码。
+- `getPort()` 和 `setPort()`：获取和设置端口号。
+
+### IPv4Address 类
+`IPv4Address` 类继承自 `IPAddress`，表示一个 IPv4 地址。该类专门为 IPv4 地址提供了方法，使用 `sockaddr_in` 结构体来存储地址。
+
+- `Create()` ：通过 IPv4 地址字符串和端口号创建 IPv4Address 对象
+- `fromString()`：从字符串（例如 "192.168.1.1"）创建 IPv4 地址。
+- `getBroadcastAddress()`, `getNetworkAddress()`, `subnetMask`：获取 IPv4 广播地址和网络地址,子网掩码。
+
+### IPv6Address 类
+`IPv6Address` 类继承自 `IPAddress`，表示一个 IPv6 地址。该类使用 `sockaddr_in6` 结构体来存储 IPv6 地址，并提供了相应的方法。
+
+- `Create()` ：通过 IPv6 地址字符串和端口号创建 IPv6Address 对象
+- `fromString()`：从字符串创建 IPv6 地址。
+- `getBroadcastAddress()`, `getNetworkAddress()`：获取 IPv6 广播地址和网络地址。
+
+### UnixAddress 类
+`UnixAddress` 类表示 Unix 域套接字地址，继承自 `Address`。它使用 `sockaddr_un` 结构体来存储 Unix 域套接字的路径。
+
+- `UnixAddress()`：无参构造函数，初始化为 Unix 域套接字。
+- `UnixAddress(const std::string& path)`：通过路径构造 Unix 域套接字地址
+- `getPath()`: 获取 Unix 域套接字的路径。
+
+### UnknownAddress 类
+`UnknownAddress` 类用于表示未知的地址类型，接收一个给定的 `sockaddr` 结构体。
+
+- `UnknownAddress(int family)` ：通过地址族初始化未知地址。
+- `UnknownAddress(const sockaddr& addr)` ：通过 sockaddr 初始化未知地址
+
+### 操作符重载
+- `operator<<`：允许将 `Address` 类的地址信息直接输出到流（如 `std::cout`）。
+
+## 使用方法
+
+```cpp
+// 查找给定主机名的第一个匹配地址
+auto address = Address::LookupAny("www.sylar.top");
+
+// 获取本机网络接口的地址
+std::multimap<std::string, std::pair<Address::ptr, uint32_t>> result;
+Address::GetInterfaceAddresses(result);
+
+// 创建 IP 地址对象
+auto ipv4_address = IPv4Address::Create("192.168.1.1", 8080);
+
+// 获取广播地址
+auto broadcast = ipv4_address->broadcastAddress(24);
+
+// 获取子网掩码
+auto subnet_mask = ipv4_address->subnetMask(24);
+```
+
+---
+
+---
 
 # 网络模块 Socket
+
+
+
+
+
+
+# 序列化模块 ByteArray
+

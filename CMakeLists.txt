@@ -30,6 +30,7 @@ set(LIB_SRC
         sylar/timer.cpp
         sylar/hook.cpp
         sylar/fd_manager.cpp
+        sylar/address.cpp
         )
 
 #生成共享库
@@ -78,6 +79,11 @@ add_executable(test_hook tests/test_hook.cpp)
 add_dependencies(test_hook sylar)
 target_link_libraries(test_hook sylar "${LIBS}")
 
+add_executable(test_address tests/test_address.cpp)
+add_dependencies(test_address sylar)
+target_link_libraries(test_address sylar "${LIBS}")
+
 #设置输出路径
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+add_executable(mytest tests/mytest.cpp)
