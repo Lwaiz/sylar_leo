@@ -1,4 +1,36 @@
+**相关C++知识点整理**
+
+项目地址：
+
+[GitHub - Lwaiz/sylar_leo](https://github.com/Lwaiz/sylar_leo)
+
+
+# 目录
+
+日志系统 [Logger](#日志系统)
+
+配置系统 [Config](#配置系统)
+
+线程模块 [Thread](#线程模块)
+
+协程模块 [Fiber](#协程模块)
+
+协程调度模块 [Scheduler](#协程调度模块)
+
+IO协程调度模块 [IOManager](#IO协程调度模块)
+
+定时器模块 [Timer](#定时器模块)
+
+Hook模块 [Hook](#Hook模块)
+
+地址模块 [Address](#Address模块)
+
+网络模块  [Socket](#Socket模块)
+
+序列化模块 [ByteArray](#序列化模块)
+
 # CMake
+
 
 
 
@@ -1160,3 +1192,766 @@ void lock() {
 
 **`std::atomic_flag_clear_explicit()`**是C++标准库中的一个原子操作函数，用于将给定的原子标志位（atomic flag）清除或重置为未设置状态。该函数接受一个指向原子标志位对象的指针作为参数，并使用可选的第二个参数order来指定内存序，以控制原子操作的同步和内存顺序。
 
+
+
+# 协程模块
+
+**协程是一种用户态的轻量级线程**
+
+## ucontext_t 类
+
+```C++
+#include <ucontext.h>
+typedef struct ucontext_t {
+    struct ucontext_t* uc_link;
+    sigset_t uc_sigmask;
+    stack_t uc_stack;
+    mcontext_t uc_mcontext;
+    ...
+    void makecontext(ucontext_t* ucp, void (*func)(), int argc, ...);
+    int swapcontext(ucontext_t* olducp, ucontext_t* newucp);
+    int getcontext(ucontext_t* ucp);
+    int setcontext(const ucontext_t* ucp);
+};
+```
+
+### **成员变量**
+
+- **`uc_link`**：**指向另一个 `ucontext_t` 结构体的指针**。如果当前上下文的执行完成后需要返回到另一个上下文，那么可以通过 `uc_link` 连接到那个上下文。
+
+- **`uc_sigmask`**：该字段存储了**当前上下文的信号掩码（signal mask）**，即在该上下文中屏蔽的信号集。
+
+- **`uc_stack`**：这是**与当前上下文相关联的栈信息**。该字段通过 `stack_t` 类型来表示栈的属性（例如栈的起始地址、大小等）。
+
+- **`uc_mcontext`**：这个字段是 `mcontext_t` 类型，**保存了当前上下文的机器状态**（寄存器状态等）。
+
+### **成员函数**
+
+#### **makecontext**
+
+    `void makecontext(ucontext_t* ucp, void (*func)(), int argc, ...);`
+
+    - 初始化一个`ucontext_t`, func参数指明了该`context`的入口函数，argc为入口参数的个数，每个参数的类型必须是int类型。
+
+    - 另外在`makecontext`前，一般需要显示的初始化栈信息以及信号掩码集同时也需要初始化`uc_link`，以便程序退出上下文后继续执行。
+
+#### **swapcontext**
+
+`int swapcontext(ucontext_t* olducp, ucontext_t* newucp);`
+
+保存当前上下文（`olducp`）并切换到另一个上下文（`newucp`）。当目标上下文执行完成时，控制会返回到 `olducp` 所表示的上下文。
+
+- **`olducp`**：指向当前上下文的指针。在调用 `swapcontext` 后，当前上下文会被保存到 `olducp` 指向的 `ucontext_t` 中。
+
+- **`newucp`**：指向目标上下文的指针，切换到该上下文执行
+
+#### **getcontext**
+
+`int getcontext(ucontext_t* ucp);`
+
+- **`ucp`**：指向 `ucontext_t` 结构体的指针，用于保存当前上下文的状态
+
+- `getcontext` 函数用于获取当前的上下文，并将其保存在 `ucp` 指向的结构体中。此函数在一些上下文切换操作中会被使用。
+
+#### **setcontext**
+
+`int setcontext(const ucontext_t* ucp);`
+
+- **`ucp`**：指向 `ucontext_t` 结构体的指针，用于指定要切换到的上下文
+
+- `setcontext` 函数用于切换到指定的上下文（由 `ucp` 指向）。当切换到该上下文时，程序会继续从该上下文的保存状态恢复执行。
+
+**注意**
+setcontext执行成功不返回
+getcontext执行成功返回0，若执行失败都返回-1。
+若uc_link为NULL,执行完新的上下文之后程序结束。
+
+# 协程调度模块
+
+## use_caller
+
+- **`use_caller = true`**  在主线程上创建调度协程
+
+    - 其中main主线程上有 1.main的主协程，2.调度协程，3.任务子协程
+
+- **`use_caller = false`** 新建一个调度线程
+
+    - 调度线程的主协程为调度协程，调度线程上有 1.调度协程，2.任务子协程
+
+# IO协程调度模块
+
+## 位操作表达式
+
+```C++
+// 确保当前事件已在 events 中注册
+SYLAR_ASSERT(events & event);  // 逻辑与
+// 从当前事件集合中移除该事件 使其不再被监听
+events = (Event)(events & ~event); 
+```
+
+- `events & event` 是一个位操作表达式，表示将 `events` 和 `event` 进行按位与运算（AND），如果结果为真，则说明 `events` 中确实包含 `event` 事件（也就是说，`event` 事件已经注册在 `events` 中）。
+
+- `~event` 是对 `event` 进行按位取反（NOT）操作。然后 `events & ~event` 表示将 `events` 中所有与 `event` 对应位相匹配的事件去掉。实际上，它移除了 `event` 对应的那一位，其他事件保持不变。
+
+## epoll机制
+
+`epoll` 是 Linux 提供的一种高效的事件通知机制，用于处理大量并发的 I/O 操作，尤其在高性能网络编程中应用广泛。与传统的 `select` 和 `poll` 不同，`epoll` 能更好地应对大量文件描述符的监听，具有更高的性能。
+
+`epoll` 提供了三个主要的操作：
+
+1. **`epoll_create`**：创建一个 `epoll` 实例，用于监听事件。
+
+2. **`epoll_ctl`**：用于控制 `epoll` 实例的行为，主要用来注册、修改或删除监听的文件描述符。
+
+3. **`epoll_wait`**：等待事件的发生，并返回已经触发的事件。
+
+### epoll_create
+
+`int epoll_create(int size);`
+
+创建一个epoll句柄，参数为epoll监听的fd的数量(只要大于0)，返回文件描述符
+
+```C++
+m_epfd = epoll_create(5000);
+    SYLAR_ASSERT(m_epfd > 0); // 检查epoll_creat是否成功
+```
+
+### pipe
+
+创建一个管道，并返回两个文件描述符，`m_tickleFds[0]` 和 `m_tickleFds[1]`。这两个文件描述符分别用于读和写操作。
+
+```C++
+// 创建管道 用于唤醒 epoll_wait
+    /*
+     * pipe的作用是用于唤醒epoll_wait，因为epoll_wait是阻塞的，
+     * 如果没有事件发生，epoll_wait会一直阻塞，
+     * 所以需要一个pipe来唤醒epoll_wait
+     */
+    int rt = pipe(m_tickleFds);
+    SYLAR_ASSERT(!rt);
+```
+
+### epoll_event
+
+epoll事件结构体
+
+**常见事件类型**
+
+- **`EPOLLIN`**：表示可以读取数据。
+
+- **`EPOLLOUT`**：表示可以写入数据。
+
+- **`EPOLLERR`**：表示文件描述符发生了错误。
+
+- **`EPOLLHUP`**：表示文件描述符被挂起。
+
+- **`EPOLLET`**：启用边缘触发模式，只有在状态改变时触发事件，而不是每次检查都触发。
+
+- **`EPOLLONESHOT`**：事件触发一次后自动移除该事件。
+
+```C++
+    // 初始化 epoll 事件结构
+    epoll_event event;
+    // 初始化epoll事件，清空event结构内存
+    memset(&event, 0, sizeof(epoll_event));
+    // 设置监听事件类型为：读事件，边缘触发
+    event.events = EPOLLIN | EPOLLET;
+    event.data.fd = m_tickleFds[0]; //关联文件描述符 设置为管道pipe 的读端描述符
+
+    // 设置管道读端为 非阻塞模式
+    rt = fcntl(m_tickleFds[0], F_SETFL, O_NONBLOCK);
+    SYLAR_ASSERT(!rt);
+
+```
+
+### epoll_ctl
+
+`int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);`
+
+用于控制epoll实例的行为，主要用来注册，修改，删除监听的文件描述符
+
+- epfd 为文件描述符，`epoll_create`函数的返回值
+
+- op 为操作类型
+
+    - **`EPOLL_CTL_ADD`**：将文件描述符添加到epoll实例中。
+
+    - **`EPOLL_CTL_MOD`**：修改已添加到epoll实例中的文件描述符的关注事件。
+
+    - **`EPOLL_CTL_DEL`**：从epoll实例中删除文件描述符。
+
+- fd 要控制的文件描述符
+
+- event 指向epoll_event结构体的指针
+
+```C++
+// 添加管道的读事件到epoll监听中
+    rt = epoll_ctl(m_epfd, EPOLL_CTL_ADD, m_tickleFds[0], &event);
+    SYLAR_ASSERT(!rt);
+```
+
+添加事件注册
+
+```C++
+// 若已经有注册的事件则为修改操作 若没有则添加操作
+    int op = fd_ctx->events ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
+    epoll_event epevent;
+    // 设置 epoll 事件，使用边缘触发 并保留保留原始事件
+    epevent.events = EPOLLIN | fd_ctx->events | event;
+    // 将fd_ctx 保存到data指针中
+    epevent.data.ptr = fd_ctx;
+
+    // 注册事件
+    int rt = epoll_ctl(m_epfd, op, fd, &epevent);
+    if(rt){
+        SYLAR_LOG_ERROR(g_logger) << "epoll_ctl(" << m_epfd << ", "
+                << (EpollCtlOp)op << ", " << fd << ", " << (EPOLL_EVENTS)epevent.events << "):"
+                << rt << " (" << errno << ") (" << strerror(errno) << ") fd_ctx->events="
+                << (EPOLL_EVENTS)fd_ctx->events;
+        return -1;
+    }
+```
+
+删除事件注册
+
+```C++
+// 删除指定事件，创建新的不包含删除事件的事件集
+Event new_events = (Event)(fd_ctx->events & ~event);  // 逻辑与一个 非event
+// 如果还有其他事件，那么就是修改已注册事件，否则就是删除事件
+int op = fd_ctx->events ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
+// 创建 epoll_event 结构体
+epoll_event epevent;
+// 设置epoll事件，使用边缘触发模式 新的注册事件(只有在事件从无到有变化时，epoll返回该事件)
+epevent.events = EPOLLET | new_events;
+// 将 fd_ctx 保存到data指针中
+epevent.data.ptr = fd_ctx;
+
+// 注册事件
+// 调用epoll_ctl删除事件 将更新的事件集 epevent 注册到 m_epfd 中
+/**
+ * @brief 从用户空间将epoll_event结构copy到内核空间
+ * @parm m_epfd   epoll文件描述符
+ * @parm op       决定是修改还是删除事件
+ * @parm fd       要操作的文件描述符
+ * @parm epevent  告诉内核需要监听的事件
+ */
+int rt = epoll_ctl(m_epfd, op, fd, &epevent);
+```
+
+删除所有已注册事件
+
+```C++
+// 删除操作
+int op = EPOLL_CTL_DEL;
+epoll_event epevent;
+// 删除所有事件
+epevent.events = 0;
+// 将fd_ctx 保存到data指针中
+epevent.data.ptr = fd_ctx;
+
+// 注册事件
+int rt = epoll_ctl(m_epfd, op, fd, &epevent);
+```
+
+### epoll_wait
+
+`int epoll_wait(int epfd, struct epoll_event *events, int maxevents, int timeout);`
+
+阻塞地等待事件发生，返回已经触发的事件列表。
+
+- maxevents 监听事件的最大数量
+
+- timeout 超时时间，表示`epoll_wait`阻塞的最长时间
+
+    - **-1**：表示一直阻塞，直到有事件发生。 
+
+    - **0**：表示立即返回，不管有没有事件发生。 
+
+    - **>0**：表示等待指定的时间（以毫秒为单位），如果在指定时间内没有事件发生，则返回。
+
+```C++
+// 阻塞在epoll_wait上，等待事件发生
+    int rt = 0;
+    do {
+        // 默认超时时间为3秒
+        static const int MAX_TIMEOUT = 3000;
+
+        if(next_timeout != ~0ull) {
+            next_timeout = (int) next_timeout > MAX_TIMEOUT
+                    ? MAX_TIMEOUT : next_timeout;
+        } else {
+            next_timeout = MAX_TIMEOUT;
+        }
+
+        // 等待事件发生，返回发生事件数量，-1 出错， 0 超时
+        rt = epoll_wait(m_epfd, events, MAX_EVENTS, (int)next_timeout);
+
+        // 如果是中断，继续等待
+        if(rt < 0 && errno == EINTR){
+        } else { // 否则退出循环
+            break;
+        }
+    } while(true);
+```
+
+### 触发方式
+
+**水平触发（Level-Triggered，LT）**
+
+- 默认模式，当文件描述符有数据可以读/写时，`epoll_wait` 会返回并触发事件。直到数据被完全处理，事件才会被移除。
+
+**边缘触发（Edge-Triggered，ET）**
+
+- 在事件状态发生变化时触发一次事件。如果不处理完数据，事件不会再次触发。因此，在边缘触发模式下，必须尽可能快地处理所有数据，避免漏掉事件。
+
+## Socket相关API
+
+### socket()
+
+**`SOCKET socket (int af , int type , int protocol)`**  创建套接字
+
+- **`af`** :（Adress Family） 指定通信协议族
+
+    - `AF_INET`：IPv4 地址族。
+
+    - `AF_INET6`：IPv6 地址族。
+
+    - `AF_UNIX`：本地 UNIX 域套接字。
+
+- **`type`**：指定套接字的类型。
+
+    - `SOCK_STREAM`：面向连接的流套接字（如 TCP）。
+
+    - `SOCK_DGRAM`：数据报套接字（如 UDP）
+
+- **`protocol`**：指定协议，通常可以传入 `0`，让系统自动选择适合的协议（如 TCP 或 UDP）
+
+- **返回值**：成功时返回套接字文件描述符 fd，失败时返回-1
+
+### connect()
+
+`int connect(int sockfd,struct sockaddr*serv_addr,int addrlen);`  建立TCP连接
+
+- **`sockfd`**: 客户端的socket描述符 
+
+- **`serv_addr`**: 服务器的socket地址 
+
+- **`addrlen`**: socket地址的长度 
+
+- **return**: 成功返回0 ， 错误返回SOCKET_ERROR
+
+### inet_pton
+
+`int inet_pton(int af, const char *src, void *dst);` IP地址转换函数
+
+- af：地址族，例如 AF_INET 或 AF_INET6。 
+
+- src：包含一个以数字和点可以表示的IP地址的字符串。 
+
+- dst：指向将要填充的新分配的内存的指针，大小由地址族确定。
+
+```C++
+// 创建 socket
+int sock = socket(AF_INET, SOCK_STREAM, 0);
+
+// 设置为非阻塞模式
+fcntl(sock, F_SETFL, O_NONBLOCK);
+
+// 声明接口地址
+sockaddr_in addr;
+// 分配空间
+memset(&addr, 0, sizeof(addr));
+// 设置 组族
+addr.sin_family = AF_INET;
+// 设置端口
+addr.sin_port = htons(80);
+// 设置IP IP地址转化函数
+inet_pton(AF_INET, "36.155.132.76", &addr.sin_addr.s_addr);
+
+// 建立连接
+if(!connect(sock, (const sockaddr*)&addr, sizeof(addr))) {
+} else if(errno == EINPROGRESS) {
+    SYLAR_LOG_INFO(g_logger) << "add event errno=" << errno << " " << strerror(errno);
+    sylar::IOManager::GetThis()->addEvent(sock, sylar::IOManager::READ,[](){
+        SYLAR_LOG_INFO(g_logger) << "read callback";
+    });
+    sylar::IOManager::GetThis()->addEvent(sock, sylar::IOManager::WRITE,[](){
+        SYLAR_LOG_INFO(g_logger) << "write callback";
+
+        sylar::IOManager::GetThis()->cancleEvent(sock, sylar::IOManager::READ);
+        close(sock);
+    });
+}
+```
+
+### fcntl()
+
+**`fcntl(sock, F_SETFL, O_NONBLOCK);`** 修改文件描述符的属性
+
+- **`sock`**：套接字的文件描述符，指向由 `socket()` 创建的套接字。
+
+- `F_SETFL` 是一个命令，用于修改文件描述符的标志。
+
+- `O_NONBLOCK` 是一个标志，表示将文件描述符设置为 **非阻塞模式**
+
+# 定时器模块
+
+## gettimeofday()
+
+`int gettimeofday(struct timeval *tv, struct timezone *tz)`
+
+获取系统时间
+
+- **`tv`**：定义一个时间结构体，包含秒数部分和微秒部分
+
+    - `tv_sec`：秒数部分（`long` 类型）
+
+    - `tv_usec`：微秒数部分（`long` 类型）
+
+- **`tz`**：时区信息结构体，包含西经分钟数 和 夏令时修正
+
+    - `tz_minuteswest`  ：西经的分钟数 
+
+    - `tz_dsttime`  ： 夏令时修正类型 
+
+```C++
+#include <sys/time.h> 
+uint64_t GetCurrentMS(){
+    struct timeval tv; // 定义一个 timeval 结构体，用于存储时间
+    gettimeofday(&tv, nullptr); // 获取当前时间，存入 tv 结构体
+    return tv.tv_sec * 1000ul + tv.tv_usec / 1000; // 返回当前时间的毫秒值
+}
+```
+
+## lower_bound()
+
+`template< class ForwardIt, class T, class Compare >
+ForwardIt lower_bound( ForwardIt first, ForwardIt last, const T& value, Compare comp );`
+
+在有序范围内查找第一个不小于给定值的元素
+
+- `first` 和 `last`：定义了一个有序范围 `[first, last)`，函数会在这个范围内进行查找。
+
+- `value`：要查找的目标值。
+
+- `comp`（可选）：自定义的比较函数，用于定义元素的比较规则。如果不提供，默认使用 `<` 运算符进行比较。
+
+`auto it = m_timers.lower_bound(now_timer);`在有序的关联容器中查找第一个不小于给定参数的元素
+
+**与 `upper_bound()` 的区别**：
+
+- `lower_bound()` 返回第一个**不小于** `now_timer` 的元素。
+
+- `upper_bound()` 返回第一个**大于** `now_timer` 的元素
+
+## OnTimer
+
+```C++
+static void OnTimer(std::weak_ptr<void> weak_cond, std::function<void()> cb) {
+    std::shared_ptr<void> tmp = weak_cond.lock();
+    if(tmp) {
+        cb();
+    }
+}
+```
+
+**在定时器触发时，检查某个资源是否仍然存在，如果存在则执行回调逻辑**
+
+- `weak_cond` 是一个弱引用指针（不会增加引用计数，不会影响资源生命周期)
+
+- `weak_cond.lock()`：尝试将 `weak_ptr` 提升为 `shared_ptr`。如果资源仍然存在（即引用计数 > 0），则返回一个有效的 `shared_ptr`；否则返回空的 `shared_ptr`
+
+# Hook模块
+
+
+
+
+
+
+
+# Address模块
+
+## 内存操作相关函数
+
+### memcmp()
+
+`int memcmp(const void* ptr1, const void* ptr2, size_t num);`
+
+- 比较 `ptr1` 和 `ptr2` 内存区域中字节的大小 
+
+- `num`：要比较的字节数
+
+### memset()
+
+`void* memset(void* ptr, int value, size_t num);`
+
+将内存块的每一个字节设置为指定的值（常用于**初始化或清空内存**）
+
+- **`ptr`**：指向要设置值的内存区域的指针。
+
+- **`value`**：要设置的值，类型为 `int`，但会被转换为 `unsigned char` 进行填充。
+
+- **`num`**：要设置的字节数
+
+- **return** : 返回传入的内存地址指针
+
+```C++
+memset(&m_addr, 0, sizeof(m_addr));
+memset(buffer, 0, sizeof(buffer));  // 清空 buffer 数组
+```
+
+### memcpy()
+
+`void* memcpy(void* dest, const void* src, size_t n);`
+
+C 和 C++ 标准库中用于内存拷贝的函数
+
+将一块内存的内容复制到另一块内存中
+
+- **dest**：目标内存的起始地址，数据将被复制到该地址。
+
+- **src**：源内存的起始地址，数据将从该地址复制过来。
+
+- **n**：要复制的字节数，表示要从源地址复制多少字节到目标地址
+
+```C++
+memcpy(m_addr.sun_path, path.c_str(), m_length);
+```
+
+### memctr()
+
+`void* memchr(const void* ptr, int value, size_t num);`  在一段内存中查找指定的字节
+
+- **`ptr`**：指向要搜索的内存区域的指针。
+
+- **`value`**：要查找的字节值（按字符处理）。
+
+- **`num`**：要搜索的字节数，即从 `ptr` 开始的内存区域的长度
+
+```C++
+const char* endipv6 = (const char*)memchr(host.c_str() + 1, ']', host.size() - 1);
+// 在一个包含 IPv6 地址的字符串中找到 ] 的位置
+```
+
+## offsetof 宏
+
+- `offsetof` 是一个宏，用来计算结构体成员相对于结构体起始位置的字节偏移量
+
+- `offsetof(type, member)` 会返回成员 `member` 在结构体 `type` 中的字节偏移量
+
+## Unix Socket
+
+Unix Socket 是一种在 Unix 和类 Unix 系统中使用的通信机制，也称为 Unix 域套接字（Unix Domain Socket）。它提供了一种进程间通信（IPC）机制，允许**同一台计算机上的不同进程之间交换数据**。
+
+与常规的网络套接字（如 TCP/IP 套接字）不同，Unix 套接字不依赖于网络协议栈，而是通过文件系统来实现进程间的通信。它们**使用文件系统中的路径来标识通信端点**，而不是 IP 地址和端口号。
+
+### Unix Socket 的特点：
+
+1. **文件系统路径**：Unix 套接字通过文件系统路径来标识（如 `/tmp/socket_file`）。这意味着它们只在本地系统内有效，不能跨越网络。
+
+2. **速度**：由于不涉及网络协议栈的开销，Unix 套接字通信速度比 TCP/IP 更快。
+
+3. **安全性**：使用文件权限来控制对 Unix 套接字的访问，因此可以基于文件系统权限控制访问。
+
+4. **支持双向通信**：Unix 套接字支持流式（字节流）和数据报（数据块）两种通信方式，类似于 TCP 套接字。
+
+5. **适用于本地进程间通信**：Unix 套接字仅用于同一台机器上的进程间通信。它非常适合本地进程间交换大量数据。
+
+### 常见的 Unix 套接字类型：
+
+- **SOCK_STREAM**：字节流类型，类似于 TCP 套接字，提供可靠的双向通信。
+
+- **SOCK_DGRAM**：数据报类型，类似于 UDP 套接字，提供不可靠的数据传输。
+
+## CreateMask()函数
+
+```C++
+template<class T>
+static T CreateMask(uint32_t bits) {
+    return (1 << (sizeof (T) * 8 - bits)) - 1;
+}
+```
+
+- **`(sizeof (T) * 8`**   获取类型T的字节数再 ×8 获取类型T对应的比特数
+
+    - `T` 是 `uint32_t` 类型，它占 4 个字节，即 `32` 位
+
+- **`1 << (sizeof(T) * 8 - bits)`**  将数字 `1` 左移 `(sizeof(T) * 8 - bits)` 位
+
+    - 如果 `T` 是 `uint32_t`（32 位），`bits` 是 `24`，那么左移操作就是 `1 << (32 - 24)`，即 `1 << 8`，结果为 `256`
+
+- **`-1`**   将上一步的结果减 1，转换为全是 1 的二进制数
+
+    - 比如，`256`（`1 << 8`）的二进制表示是 `100000000`，减去 1 后变为 `11111111`
+
+- **result** 
+
+    - 最终的结果是一个掩码，它的高位为 0，低位为 1（根据 `bits` 的值决定多少位是 1，剩余的位是 0）
+
+## 条件编译优化
+
+```C++
+/**
+ * @brief 优化条件编译的性能
+ * @details  __builtin_expect 内建函数来告诉编译器，该条件大概率为真，从而优化代码生成
+ */
+#if defined __GNUC__ || defined __llvm__   // 针对GCC 或 LLVM 编译器
+/// LIKCLY 宏的封装, 告诉编译器优化,条件大概率成立
+# define SYLAR_LIKELY(x)    __builtin_expect(!!(x), 1)
+/// UNLIKCLY 宏的封装, 告诉编译器优化,条件大概率成立
+# define SYLAR_UNLIKELY(x)    __builtin_expect(!!(x), 0)
+#else
+#define SYLAR_LIKELY(x)   (x)
+#define SYLAR_UNLIKELY(x)   (x)
+#endif
+```
+
+**`__builtin_expect`**：这是 GCC 和 LLVM 提供的一个编译器内建函数，用于帮助编译器优化条件判断。它通过提示条件的成立概率来指导编译器优化分支预测。
+
+- **`__builtin_expect(!!(x), 1)`**：表示条件 `x` **成立**的可能性较高（类似于 `SYLAR_LIKELY(x)`）。
+
+- **`__builtin_expect(!!(x), 0)`**：表示条件 `x` **不成立**的可能性较高（类似于 `SYLAR_UNLIKELY(x)`）。
+
+```C++
+if (SYLAR_LIKELY(x > 0)) {
+    // 条件大概率成立时执行的代码
+} else {
+    // 条件大概率不成立时执行的代码
+}
+if (SYLAR_UNLIKELY(x < 0)) {
+    // 条件大概率不成立时执行的代码
+}
+```
+
+# Socket模块
+
+
+
+## 标准库套接字API
+
+POSIX 标准的套接字 API（如 `socket`, `bind`, `listen`, `accept` 等）。这些函数一般用于处理 TCP/IP 协议栈中的连接、监听、发送和接收数据等操作。
+
+### 1. **socket()**
+
+**`int socket(int domain, int type, int protocol);`**
+
+创建一个套接字，用于网络通信。它返回一个套接字描述符，后续操作都需要通过该描述符。
+
+- `domain`: 地址族，通常是 `AF_INET`（IPv4）或 `AF_INET6`（IPv6）。
+
+- `type`: 套接字类型，通常是 `SOCK_STREAM`（TCP）或 `SOCK_DGRAM`（UDP）。
+
+- `protocol`: 协议，通常为 0，表示默认协议。
+
+### 2. **bind()**
+
+**`int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);`**
+
+将创建的套接字绑定到本地地址（IP 和端口）。
+
+- `sockfd`: 套接字描述符。
+
+- `addr`: 地址结构体，通常是 `sockaddr_in` 或 `sockaddr_in6`。
+
+- `addrlen`: 地址结构体的长度。
+
+### 3. **listen()**
+
+**`int listen(int sockfd, int backlog);`**
+
+将服务器套接字设置为监听状态，准备接受连接请求。
+
+- `sockfd`: 套接字描述符。
+
+- `backlog`: 等待队列的最大长度。
+
+### 4. **accept()**
+
+**`int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);`**
+
+从监听套接字中接受一个连接，并返回一个新的套接字，用于与客户端通信。
+
+- `sockfd`: 监听套接字描述符。
+
+- `addr`: 客户端地址信息。
+
+- `addrlen`: 地址信息的长度。
+
+### 5. **connect()**
+
+**`int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);`**
+
+客户端调用，连接到远程服务器。
+
+- `sockfd`: 套接字描述符。
+
+- `addr`: 远程服务器的地址。
+
+- `addrlen`: 地址的长度。
+
+### 6. **send()**
+
+**`ssize_t send(int sockfd, const void *buf, size_t len, int flags);`**
+
+发送数据到连接的远程主机（客户端或服务器）。
+
+- `sockfd`: 套接字描述符。
+
+- `buf`: 数据缓冲区。
+
+- `len`: 发送的数据长度。
+
+- `flags`: 控制标志，通常为 0。
+
+### 7. **recv()**
+
+**`ssize_t recv(int sockfd, void *buf, size_t len, int flags);`**
+
+从连接的远程主机接收数据。
+
+- `sockfd`: 套接字描述符。
+
+- `buf`: 数据缓冲区。
+
+- `len`: 要接收的最大字节数。
+
+- `flags`: 控制标志，通常为 0。
+
+### 8. **close()**
+
+**`int close(int sockfd);`**
+
+关闭套接字，释放资源。
+
+- `sockfd`: 套接字描述符。
+
+## 网络编程流程
+
+**服务器端：**
+
+1. 使用 `socket()` 创建套接字。
+
+2. 使用 `bind()` 将套接字绑定到指定的 IP 地址和端口。
+
+3. 使用 `listen()` 使服务器开始监听客户端的连接请求。
+
+4. 使用 `accept()` 接受客户端连接。
+
+5. 使用 `recv()` 接收客户端发送的数据。
+
+6. 最后，通过 `close()` 关闭连接和服务器套接字。
+
+**客户端：**
+
+1. 使用 `socket()` 创建套接字。
+
+2. 使用 `inet_pton()` 转换服务器 IP 地址。
+
+3. 使用 `connect()` 连接到服务器。
+
+4. 使用 `send()` 发送数据。
+
+5. 使用 `close()` 关闭套接字。
+
+
+# 序列化模块
