@@ -1250,10 +1250,147 @@ auto subnet_mask = ipv4_address->subnetMask(24);
 
 # 网络模块 Socket
 
+## `Socket` 类
 
+`Socket` 类是用于网络通信的封装类，提供了创建、连接、监听、发送、接收等基本的套接字操作。
+该类支持多种类型的套接字（如 TCP、UDP 和 Unix 套接字），并提供了对套接字的管理和操作接口。
 
+### 枚举类型
 
+#### `Type` - 套接字类型
+- **`TCP`**：表示 TCP 套接字（`SOCK_STREAM`）。
+- **`UDP`**：表示 UDP 套接字（`SOCK_DGRAM`）。
 
+#### `Family` - 套接字协议族
+- **`IPv4`**：表示 IPv4 协议族（`AF_INET`）。
+- **`IPv6`**：表示 IPv6 协议族（`AF_INET6`）。
+- **`UNIX`**：表示 UNIX 域套接字协议族（`AF_UNIX`）。
+
+### 静态方法
+
+- **`Create XXX`**：创建各种类型套接字 (TCP、UDP、IPv4、IPv6、Unix)
+
+### 构造函数和析构函数
+
+- **`Socket`**：
+  - 构造函数，接受协议族、类型和协议来初始化套接字。
+
+- **`~Socket`**：
+  - 虚析构函数，销毁套接字对象。
+
+### 连接与绑定
+
+- **`accept`**：
+  - 接收连接请求，返回一个新的连接套接字。
+
+- **`bind`**：
+  - 绑定地址到套接字，通常用于服务器端。
+
+- **`connect`**：
+  - 连接到指定的地址。
+
+- **`reconnect`**：
+  - 尝试重新连接到远端。
+
+- **`listen`**：
+  - 启动监听，准备接受连接。
+
+- **`close`**：
+  - 关闭套接字。
+
+### 数据发送和接收
+
+- **`send`**：
+  - 发送数据到连接的远端或指定地址。
+
+- **`sendTo`**：
+  - 发送数据到指定地址（支持 UDP）。
+
+- **`recv`**：
+  - 从套接字接收数据。
+
+- **`recvFrom`**：
+  - 从指定的地址接收数据（支持 UDP）。
+
+### 套接字选项
+
+- **`getSendTimeout`** 和 **`setSendTimeout`**：
+  - 获取和设置发送超时时间。
+
+- **`getRecvTimeout`** 和 **`setRecvTimeout`**：
+  - 获取和设置接收超时时间。
+
+- **`getOption`** 和 **`setOption`**：
+  - 获取和设置套接字选项。
+
+### 地址信息
+
+- **`getRemoteAddress`**：
+  - 获取远端地址。
+
+- **`getLocalAddress`**：
+  - 获取本地地址。
+
+### 其他功能
+
+- **`isValid`**：
+  - 检查套接字是否有效。
+
+- **`getError`**：
+  - 获取套接字错误信息。
+
+- **`dump`**：
+  - 输出套接字的信息到流中。
+
+- **`cancelRead`**、**`cancelWrite`**、**`cancelAccept`**、**`cancelAll`**：
+  - 取消相应的事件操作。
+
+### 成员变量
+
+- **`m_sock`**：套接字句柄。
+- **`m_family`**：协议族（如 IPv4、IPv6 或 UNIX）。
+- **`m_type`**：套接字类型（如 TCP 或 UDP）。
+- **`m_protocol`**：协议类型。
+- **`m_isConnected`**：表示套接字是否已连接。
+- **`m_localAddress`**：本地地址（`Address` 类型）。
+- **`m_remoteAddress`**：远端地址（`Address` 类型）。
+
+### 类的继承
+
+- `Socket` 类继承自 `std::enable_shared_from_this<Socket>`，以支持智能指针的共享。
+- 继承自 `boost::noncopyable`，防止 `Socket` 对象被拷贝。
+
+---
+
+## 示例代码
+
+```cpp
+// 创建一个 IPv4 的 TCP 套接字
+sylar::Socket::ptr socket = sylar::Socket::CreateTCPSocket();
+
+// 绑定地址到套接字
+sylar::Address::ptr address = sylar::Address::Create("127.0.0.1", 8080);
+socket->bind(address);
+
+// 连接远端地址
+sylar::Address::ptr remoteAddress = sylar::Address::Create("192.168.1.1", 9090);
+socket->connect(remoteAddress);
+
+// 发送数据
+const char* data = "Hello, World!";
+socket->send(data, strlen(data));
+
+// 接收数据
+char buffer[1024];
+int bytesRead = socket->recv(buffer, sizeof(buffer));
+
+// 关闭套接字
+socket->close();
+```
+
+---
+
+---
 
 # 序列化模块 ByteArray
 

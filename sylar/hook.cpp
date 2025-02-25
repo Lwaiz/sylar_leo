@@ -583,7 +583,7 @@ int ioctl(int d, unsigned long int request, ...){
 
 
 int getsockopt(int sockfd, int level, int optname, void *optval, socklen_t *optlen){
-    return getsockopt_f(sockfd, level, optname, optval, optlen);
+    return getsockopt_f(sockfd, level, optname, optval, optlen);   // 系统调用
 }
 
 
@@ -592,7 +592,9 @@ int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t
         return setsockopt_f(sockfd, level, optname, optval, optlen);
     }
     if(level == SOL_SOCKET) {
+        // 处理超时选项
         if(optname == SO_RCVTIMEO || optname == SO_SNDTIMEO) {
+            // 通过文件描述符上下文FdCtx 设置超时时间
             sylar::FdCtx::ptr ctx = sylar::FdMgr::GetInstance()->get(sockfd);
             if(ctx){
                 const timeval* v = (const timeval*) optval;
