@@ -55,17 +55,17 @@ byteswap(T value){
 
 /// 条件编译 确定系统字节序
 
-#if BYTE_ORDER == BIG_ENDIAN
-#define SYLAR_BYTE_ORDER SYLAR_BIG_ENDIAN
+#if BYTE_ORDER == BIG_ENDIAN    // 检测当前机器的字节序如果是大端序
+#define SYLAR_BYTE_ORDER SYLAR_BIG_ENDIAN  // 定义项目字节序为大端字节序
 #else
 #define SYLAR_BYTE_ORDER SYLAR_LITTLE_ENDIAN
 #endif
 
-/// 如果是大端字节序
+/// 如果是当前机器是大端字节序
 #if SYLAR_BYTE_ORDER == SYLAR_BIG_ENDIAN
 
 /**
- * @brief 只在小端机器上执行 byteswap 在大端机器上什么也不做
+ * @brief 大端数据直接返回
  */
     template<class T>
     T byteswapOnLittleEndian(T t){
@@ -73,7 +73,7 @@ byteswap(T value){
     }
 
 /**
- * @brief 只在大端机器上执行 byteswap 在小端机器上什么也不做
+ * @brief 小端数据转换为大端
  */
     template<class T>
     T byteswapOnBigEndian(T t){

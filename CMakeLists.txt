@@ -32,6 +32,7 @@ set(LIB_SRC
         sylar/fd_manager.cpp
         sylar/address.cpp
         sylar/socket.cpp
+        sylar/bytearray.cpp
         )
 
 #生成共享库
