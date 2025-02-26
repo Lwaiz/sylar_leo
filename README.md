@@ -27,7 +27,7 @@
  | 2025.2.21 | Hook模块 [Hook](#Hook模块-hook)               |
  | 2025.2.23 | 地址模块 [Address](#网络地址模块-address)           |
  | 2025.2.24 | 网络模块  [Socket](#网络模块-Socket)              |
- | 2025.2.   | 序列化模块 [ByteArray](#序列化模块-ByteArray)                |
+ | 2025.2.26 | 序列化模块 [ByteArray](#序列化模块-ByteArray)                |
 ---
 
 
@@ -1009,7 +1009,86 @@ sylar还增加了一个connect_with_timeout接口用于实现带超时的connect
 ### socket/fcntl/ioctl/close等接口
     这类接口主要处理的是边缘情况，比如分配fd上下文，处理超时及用户显式设置非阻塞问题。
 
-## 支持函数
+## 文件句柄管理
+
+文件句柄管理类（FdManager），核心是一个 文件句柄上下文类（FdCtx），用于管理每个文件句柄（fd）相关的状态信息。它提供了对文件句柄的封装，方便管理文件描述符的状态（如是否阻塞、是否已关闭、读写超时等）。这个管理类使用了 单例模式，确保在整个程序中只存在一个文件句柄管理实例。
+
+### FdCtx — 文件句柄上下文类
+   这个类负责管理一个文件描述符（fd）的相关信息，如是否为 socket、是否已关闭、是否为非阻塞等。
+
+**构造函数：**
+
+`FdCtx(int fd);` 通过文件描述符 fd 构造文件句柄上下文对象。
+
+**析构函数：**
+
+`~FdCtx();`  析构函数，用于清理资源。
+
+**成员函数：**
+
+`bool isInit() const`：判断 FdCtx 是否已初始化。
+
+`bool isSocket() const`：判断文件描述符是否为 socket 类型。
+
+`bool isClose() const`：判断文件描述符是否已关闭。
+
+`void setUserNonblock(bool v)`：设置用户是否主动设置为非阻塞。
+
+`bool getUserNonblock() const`：获取用户是否主动设置为非阻塞。
+
+`void setSysNonblock(bool v)`：设置系统是否非阻塞。
+
+`bool getSysNonblock() const`：获取系统是否非阻塞。
+
+`void setTimeout(int type, uint64_t v)`：设置超时时间。
+
+`uint64_t getTimeout(int type)`：获取超时时间（读/写超时）。
+
+**私有成员：**
+
+`m_isInit`：标识 FdCtx 是否已初始化。
+
+`m_isSocket`：标识该文件句柄是否为 socket。
+
+`m_sysNonblock`：标识系统是否设置为非阻塞。
+
+`m_userNonblock`：标识用户是否设置为非阻塞。
+
+`m_isClosed`：标识文件句柄是否已关闭。
+
+`m_fd`：存储文件描述符。
+
+`m_recvTimeout` 和 `m_sendTimeout`：分别表示读和写超时时间。
+
+### FdManager — 文件句柄管理类
+   这个类是一个管理器，负责管理多个 FdCtx 对象。它使用了读写锁 (RWMutex) 来保证线程安全。
+
+**构造函数：**
+
+`FdManager();`  构造函数，初始化文件句柄管理类。
+
+**成员函数：**
+
+`FdCtx::ptr get(int fd, bool auto_create = false)`：获取或创建一个 FdCtx 对象，如果文件句柄不存在且 auto_create 为 true，则自动创建。
+
+`void del(int fd)`：删除指定文件句柄的 FdCtx 对象。
+
+**私有成员：**
+
+`RWMutexType m_mutex`：用于保证文件句柄集合 m_datas 的线程安全。
+
+`std::vector<FdCtx::ptr> m_datas`：存储所有文件句柄的 FdCtx 对象。
+
+**Singleton 模式**
+`typedef Singleton<FdManager> FdMgr;` 确保 FdManager 是单例模式。也就是说，整个程序中只能有一个 FdManager 实例。
+
+**使用场景**
+
+- `FdCtx` 主要用于封装和管理每个文件句柄（fd）的状态信息。比如，对于 socket 文件句柄，它能够管理是否非阻塞、读写超时时间等。
+- `FdManager` 是一个全局的文件句柄管理器，确保每个文件句柄都有对应的 FdCtx 对象，并且通过 get() 和 del() 方法可以方便地访问和删除这些对象。
+
+
+## Hook 支持函数
 支持的函数
 以下是 Sylar Hook 库支持的部分系统调用及其自定义实现：
 
@@ -1393,4 +1472,86 @@ socket->close();
 ---
 
 # 序列化模块 ByteArray
+
+## 主要功能
+
+- **内存管理**：ByteArray 使用链表方式组织内存块，通过 Node 结构体存储每个内存块，并根据需要动态扩展容量。
+- **数据读写**：提供多种数据类型的读写操作，包括 int8_t、int16_t、int32_t、int64_t、float、double、std::string 等。
+- **字节序支持**：可以设置并检查数据的字节序（大端或小端）。
+
+## 类定义
+
+```cpp
+class ByteArray {
+public:
+    ByteArray(size_t base_size = 4096);
+    ~ByteArray();
+
+    // 数据写入接口
+    void writeFint8(int8_t value);
+    void writeFuint8(uint8_t value);
+    void writeInt32(int32_t value);
+    void writeStringF16(const std::string& value);
+    void writeFloat(float value);
+    void writeDouble(double value);
+    // 其它写入接口...
+
+    // 数据读取接口
+    int8_t readFint8();
+    uint8_t readFuint8();
+    int32_t readInt32();
+    std::string readStringF16();
+    float readFloat();
+    double readDouble();
+    // 其它读取接口...
+
+    // 内部操作接口
+    void clear();  // 清空 ByteArray
+    void write(const void* buf, size_t size);  // 写入指定大小的数据
+    void read(void* buf, size_t size);  // 读取指定大小的数据
+
+    // 内存管理接口
+    void addCapacity(size_t size);  // 扩展容量
+    size_t getSize() const;  // 获取当前数据大小
+    size_t getCapacity() const;  // 获取当前容量
+    size_t getPosition() const;  // 获取当前操作位置
+    void setPosition(size_t position);  // 设置操作位置
+};
+```
+### 内存管理接口
+`addCapacity(size_t size)`
+扩展 ByteArray 的容量以容纳更多数据。
+
+`getSize()`
+获取当前数据的大小（即已经写入的字节数）。
+
+`getCapacity()`
+获取当前容量（即可写入的字节数）。
+
+`getPosition()`
+获取当前读取/写入位置。
+
+`setPosition(size_t position)`
+设置当前读取/写入位置。
+
+### 其他功能
+`clear()`
+清空 ByteArray，将当前位置和数据大小重置为 0。
+
+`toString()`
+将 ByteArray 中的数据转化为 std::string 类型。
+
+`toHexString()`
+将 ByteArray 中的数据转化为 16 进制字符串。
+
+`writeToFile(const std::string& name)`
+将 ByteArray 数据写入文件。
+
+`readFromFile(const std::string& name)`
+从文件中读取数据并填充到 ByteArray。
+
+
+
+
+
 

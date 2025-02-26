@@ -149,6 +149,7 @@ static ssize_t do_io(int fd, OriginFun fun, const char* hook_fun_name,
     std::shared_ptr<timer_info> tinfo(new timer_info);
 
 retry:
+
     // 先调用原始函数读/写 数据 若函数返回值有效 则直接返回
     ssize_t n = fun(fd, std::forward<Args>(args)...);
     // 中断 则重试
