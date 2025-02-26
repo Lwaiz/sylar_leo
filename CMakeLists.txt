@@ -89,6 +89,10 @@ add_executable(test_socket tests/test_socket.cpp)
 add_dependencies(test_socket sylar)
 target_link_libraries(test_socket sylar "${LIBS}")
 
+add_executable(test_bytearray tests/test_bytearray.cpp)
+add_dependencies(test_bytearray sylar)
+target_link_libraries(test_bytearray sylar "${LIBS}")
+
 #设置输出路径
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)

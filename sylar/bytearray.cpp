@@ -53,7 +53,7 @@ ByteArray::ByteArray(size_t base_size)
     ,m_cur(m_root) {                // 当前节点指向根节点
 }
 
-ByteArray::~ByteArray(){
+ByteArray::~ByteArray() {
     Node* tmp = m_root;
     while(tmp) {
         m_cur = tmp;
@@ -132,16 +132,16 @@ void ByteArray::writeFuint64 (uint64_t value){
  * @return
  */
 static uint32_t EncodeZigzag32(const int32_t& v) {
-    if( v < 0 ){
-        // 对于负数，取其绝对值，并将其乘以 2 然后减去 1，这样负数被映射到一个奇数值
+    if(v < 0) {
         return ((uint32_t)(-v)) * 2 - 1;
     } else {
         // 对于正数，将其乘以 2
         return v * 2;
     }
 }
+
 static uint64_t EncodeZigzag64(const int64_t& v) {
-    if( v < 0 ){
+    if(v < 0) {
         return ((uint64_t)(-v)) * 2 - 1;
     } else {
         return v * 2;
@@ -153,12 +153,12 @@ static uint64_t EncodeZigzag64(const int64_t& v) {
  * @param v
  * @return
  */
-static uint32_t DecodeZigzag32(const int32_t& v) {
+static int32_t DecodeZigzag32(const uint32_t& v) {
     // 将编码值右移一位以恢复整数的绝对值。(去除 ×2 操作)
     // 如果最低位为 1，表示负数，按位取反来得到原始的负数
     return (v >> 1) ^ -(v & 1);
 }
-static uint64_t DecodeZigzag64(const int64_t& v) {
+static int64_t DecodeZigzag64(const uint64_t& v) {
     return (v >> 1) ^ -(v & 1);
 }
 
@@ -253,33 +253,34 @@ uint8_t ByteArray::readFuint8(){
 }
 
 #define XX(type) \
-    type(v);     \
+    type v; \
     read(&v, sizeof(v)); \
-    if(m_endian == SYLAR_BYTE_ORDER) {  \
+    if(m_endian == SYLAR_BYTE_ORDER) { \
         return v; \
-    } else {     \
-        return byteswap(v);      \
+    } else { \
+        return byteswap(v); \
     }
 
-
-int16_t ByteArray::readFint16(){
+int16_t  ByteArray::readFint16() {
     XX(int16_t);
 }
-uint16_t ByteArray::readFuint16(){
+uint16_t ByteArray::readFuint16() {
     XX(uint16_t);
 }
 
-int32_t ByteArray::readFint32(){
+int32_t  ByteArray::readFint32() {
     XX(int32_t);
 }
-uint32_t ByteArray::readFuint32(){
+
+uint32_t ByteArray::readFuint32() {
     XX(uint32_t);
 }
 
-int64_t ByteArray::readFint64(){
+int64_t  ByteArray::readFint64() {
     XX(int64_t);
 }
-uint64_t ByteArray::readFuint64(){
+
+uint64_t ByteArray::readFuint64() {
     XX(uint64_t);
 }
 
@@ -296,6 +297,7 @@ uint32_t ByteArray::readUint32(){
         uint8_t b = readFuint8();
         if(b < 0x80){
             result |= ((uint32_t)b) << i;
+            break;
         } else {
             result |= (((uint32_t)(b & 0x7f)) << i);
         }
@@ -312,6 +314,7 @@ uint64_t ByteArray::readUint64(){
         uint8_t b = readFuint8();
         if(b < 0x80){
             result |= ((uint64_t)b) << i;
+            break;
         } else {
             result |= (((uint64_t)(b & 0x7f)) << i);
         }
@@ -388,10 +391,11 @@ void ByteArray::clear(){
 }
 
 
-void ByteArray::write(const void* buf, size_t size){
+void ByteArray::write(const void* buf, size_t size) {
     if(size == 0) {
-        addCapacity(size);  // 扩展容量
+        return;
     }
+    addCapacity(size);
 
     // 当前节点的偏移量（即当前写入的位置）
     size_t npos = m_position % m_baseSize;
@@ -414,7 +418,7 @@ void ByteArray::write(const void* buf, size_t size){
             bpos += size;
             size = 0;
         } else {      /// 如果当前节点剩余空间小于要写入的大小  先写满当前节点，再移动到下一节点
-            memcpy(m_cur->ptr + npos, (const char*)buf + bpos, size);
+            memcpy(m_cur->ptr + npos, (const char*)buf + bpos, ncap);
             m_position += ncap;      // 更新当前位置
             bpos += ncap;            // 更新缓冲区偏移量
             size -= ncap;            // 减少待写入的字节数
@@ -448,7 +452,7 @@ void ByteArray::read(void* buf, size_t size){
             bpos += size;
             size = 0;
         } else {      /// 如果当前节点剩余空间小于要读取的大小  先读取当前节点，再移动到下一节点
-            memcpy((char*)buf + bpos, m_cur->ptr + npos, size);
+            memcpy((char*)buf + bpos, m_cur->ptr + npos, ncap);
             m_position += ncap;
             bpos += ncap;
             size -= ncap;
@@ -465,7 +469,7 @@ void ByteArray::read(void* buf, size_t size, size_t position) const {
         throw std::out_of_range("not enough len");
     }
 
-    size_t npos = m_position % m_baseSize;
+    size_t npos = position % m_baseSize;
     size_t ncap = m_cur->size - npos;
     size_t bpos = 0;
     Node* cur = m_cur;
@@ -479,7 +483,7 @@ void ByteArray::read(void* buf, size_t size, size_t position) const {
             bpos += size;
             size = 0;
         } else {
-            memcpy((char*)buf + bpos, cur->ptr + npos, size);
+            memcpy((char*)buf + bpos, cur->ptr + npos, ncap);
             position += ncap;
             bpos += ncap;
             size -= ncap;
@@ -517,8 +521,8 @@ bool ByteArray::writeToFile(const std::string& name) const{
     std::ofstream ofs;
     ofs.open(name, std::ios::trunc | std::ios::binary);
     if(!ofs) {
-        SYLAR_LOG_ERROR(g_logger) << " writeToFile name=" << name
-                << "error, errno=" << errno << " errstr=" << strerror(errno);
+        SYLAR_LOG_ERROR(g_logger) << "writeToFile name=" << name
+            << " error , errno=" << errno << " errstr=" << strerror(errno);
         return false;
     }
 
@@ -631,13 +635,13 @@ uint64_t ByteArray::getReadBuffers(std::vector<iovec>& buffers, uint64_t len) co
 
 uint64_t ByteArray::getReadBuffers(std::vector<iovec>& buffers, uint64_t len, uint64_t position) const{
     len = len > getReadSize() ? getReadSize() : len;
-    if(len == 0){
+    if(len == 0) {
         return 0;
     }
 
     uint64_t size = len;
 
-    size_t npos = m_position % m_baseSize;
+    size_t npos = position % m_baseSize;
     size_t count = position / m_baseSize;
     Node* cur = m_root;
     while(count > 0) {
@@ -645,9 +649,9 @@ uint64_t ByteArray::getReadBuffers(std::vector<iovec>& buffers, uint64_t len, ui
         --count;
     }
 
-    size_t ncap = m_cur->size - npos;
+    size_t ncap = cur->size - npos;
     struct iovec iov;
-    while(len > 0){
+    while(len > 0) {
         if(ncap >= len) {
             iov.iov_base = cur->ptr + npos;
             iov.iov_len = len;
@@ -665,8 +669,8 @@ uint64_t ByteArray::getReadBuffers(std::vector<iovec>& buffers, uint64_t len, ui
     return size;
 }
 
-uint64_t ByteArray::getWriteBuffers(std::vector<iovec>& buffers, uint64_t len){
-    if(len == 0){
+uint64_t ByteArray::getWriteBuffers(std::vector<iovec>& buffers, uint64_t len) {
+    if(len == 0) {
         return 0;
     }
     addCapacity(len);
@@ -684,6 +688,7 @@ uint64_t ByteArray::getWriteBuffers(std::vector<iovec>& buffers, uint64_t len){
         } else {
             iov.iov_base = cur->ptr + npos;
             iov.iov_len = ncap;
+
             len -= ncap;
             cur = cur->next;
             ncap = cur->size;
