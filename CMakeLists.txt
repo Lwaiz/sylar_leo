@@ -33,6 +33,9 @@ set(LIB_SRC
         sylar/address.cpp
         sylar/socket.cpp
         sylar/bytearray.cpp
+        sylar/http/http.cpp
+        sylar/http/http11_parser.cpp
+        sylar/http/httpclient_parser.cpp
         )
 
 #生成共享库
@@ -92,6 +95,10 @@ target_link_libraries(test_socket sylar "${LIBS}")
 add_executable(test_bytearray tests/test_bytearray.cpp)
 add_dependencies(test_bytearray sylar)
 target_link_libraries(test_bytearray sylar "${LIBS}")
+
+add_executable(test_http tests/test_http.cpp)
+add_dependencies(test_http sylar)
+target_link_libraries(test_http sylar "${LIBS}")
 
 #设置输出路径
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)

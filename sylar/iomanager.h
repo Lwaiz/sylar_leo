@@ -3,7 +3,7 @@
   * @file           : iomanager.h
   * @author         : 18483
   * @brief          : 基于 Epoll 的 IO协程调度器
-  * @attention      : None
+  * @attention      : fd->(File Description)  文件描述符
   * @date           : 2025/2/14
   ******************************************************************************
   */

@@ -195,7 +195,7 @@ retry:
             sylar::Fiber::YiledToHold();
             //SYLAR_LOG_DEBUG(g_logger) << "do_io<" << hook_fun_name << ">";
             if(timer) { timer->cancle(); }
-            // 从定时任务唤醒 超时失败
+            // 从定时任务唤醒 超时 失败
             if(tinfo->cancelled) {
                 errno = tinfo->cancelled;
                 return -1;

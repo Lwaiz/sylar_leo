@@ -15,19 +15,20 @@
 
 - 学习进度
 
- | 开发时间      | 模块                                        | 
- |-----------|-------------------------------------------|
- | 2025.1.6  | 日志系统 [Logger](#日志系统-logger)               |
- | 2025.1.15 | 配置系统 [Config](#配置系统-config)               |
- | 2025.2.5  | 线程模块 [Thread](#线程模块-thread)               |
- | 2025.2.9  | 协程模块 [Fiber](#协程模块-fiber)                 |
- | 2025.2.11 | 协程调度模块 [Scheduler](#协程调度模块-scheduler)     |
- | 2025.2.14 | IO协程调度模块 [IOManager](#IO协程调度模块-IOManager) |
- | 2025.2.16 | 定时器模块 [Timer](#定时器模块-timer)               |
- | 2025.2.21 | Hook模块 [Hook](#Hook模块-hook)               |
- | 2025.2.23 | 地址模块 [Address](#网络地址模块-address)           |
- | 2025.2.24 | 网络模块  [Socket](#网络模块-Socket)              |
- | 2025.2.26 | 序列化模块 [ByteArray](#序列化模块-ByteArray)                |
+ | 开发时间       | 模块                                       | 
+ |------------|------------------------------------------|
+ | 2025.1.6   | 日志系统 [Logger](#日志系统-logger)              |
+ | 2025.1.15  | 配置系统 [Config](#配置系统-config)              |
+ | 2025.2.5   | 线程模块 [Thread](#线程模块-thread)              |
+ | 2025.2.9   | 协程模块 [Fiber](#协程模块-fiber)                |
+ | 2025.2.11  | 协程调度模块 [Scheduler](#协程调度模块-scheduler)    |
+ | 2025.2.14  | IO协程调度模块 [IOManager](#IO协程调度模块-IOManager) |
+ | 2025.2.16  | 定时器模块 [Timer](#定时器模块-timer)              |
+ | 2025.2.21  | Hook模块 [Hook](#Hook模块-hook)              |
+ | 2025.2.23  | 地址模块 [Address](#网络地址模块-address)          |
+ | 2025.2.24  | 网络模块  [Socket](#网络模块-Socket)             |
+ | 2025.2.26  | 序列化模块 [ByteArray](#序列化模块-ByteArray)      |
+ | 2025.3.18  | HTTP协议模块 [HTTP](#HTTP协议模块)               |
 ---
 
 
@@ -143,8 +144,6 @@ format函数 返回格式化日志文本
 #### LogAppender 类
 **日志输出目标类: 控制台 / 文件**
 
-
-
 #### StdOutLogAppender 类
 输出到控制台的Appender
 
@@ -155,6 +154,69 @@ format函数 返回格式化日志文本
 **日志器**
 
 ### 2. **日志宏**
+
+```cpp
+/**
+ * @brief 使用流方式将日志级别 level 的日志写到 logger
+ *
+ * 说明：
+ * - 如果 logger 的日志级别大于指定的 level，则不会输出日志。
+ * - 通过 `sylar::LogEventWrap` 创建一个日志事件，并通过流方式将日志信息追加到日志流中。
+ * - 主要目的是为不同日志级别提供统一的日志输出接口。
+ */
+#define SYLAR_LOG_LEVEL(logger, level) \
+    if(logger->getLevel() <= level)    \
+        sylar::LogEventWrap(sylar::LogEvent::ptr(new sylar::LogEvent( \
+                                logger, level, __FILE__, __LINE__, 0,  \
+                                sylar::GetThreadId(),          \
+                                sylar::GetFiberId(),           \
+                                time(0),                       \
+                                sylar::Thread::GetName()))).getSS()
+/**
+ * @brief 使用流方式将日志级别 debug，info，warn，error，fatal 的日志写到 logger
+ */
+#define SYLAR_LOG_DEBUG(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::DEBUG)
+#define SYLAR_LOG_INFO(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::INFO)
+#define SYLAR_LOG_WARN(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::WARN)
+#define SYLAR_LOG_ERROR(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::ERROR)
+#define SYLAR_LOG_FATAL(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::FATAL)
+
+/**
+ * @brief 使用 格式化 方式将日志级别 level 的日志写入到 logger
+ *
+ * 说明：
+ * - 如果 logger 的日志级别大于指定的 level，则不会输出日志。
+ * - 通过 `sylar::LogEventWrap` 创建一个日志事件，并调用日志事件的 `format` 方法进行格式化。
+
+ */
+#define SYLAR_LOG_FMT_LEVEL(logger, level, fmt, ...) \
+    if(logger->getLevel() <= level)                  \
+        sylar::LogEventWrap(sylar::LogEvent::ptr(new sylar::LogEvent( \
+        logger, level, __FILE__, __LINE__,           \
+        0, sylar::GetThreadId(),                     \
+        sylar::GetFiberId(),                         \
+        time(0),                                     \
+        sylar::Thread::GetName()))).getEvent()->format(fmt, __VA_ARGS__)
+
+/**
+ * @brief 使用 格式化 方式将日志级别 debug，info，warn，error，fatal 的日志写到 logger
+ */
+#define SYLAR_LOG_FMT_DEBUG(logger, fmt, ...) SYLAR_LOG_FMT_LEVEL(logger, sylar::LogLevel::DEBUG, fmt, __VA_ARGS__)
+#define SYLAR_LOG_FMT_INFO(logger, fmt, ...) SYLAR_LOG_FMT_LEVEL(logger, sylar::LogLevel::INFO, fmt, __VA_ARGS__)
+#define SYLAR_LOG_FMT_WARN(logger, fmt, ...) SYLAR_LOG_FMT_LEVEL(logger, sylar::LogLevel::WARN, fmt, __VA_ARGS__)
+#define SYLAR_LOG_FMT_ERROR(logger, fmt, ...) SYLAR_LOG_FMT_LEVEL(logger, sylar::LogLevel::ERROR, fmt, __VA_ARGS__)
+#define SYLAR_LOG_FMT_FATAL(logger, fmt, ...) SYLAR_LOG_FMT_LEVEL(logger, sylar::LogLevel::FATAL, fmt, __VA_ARGS__)
+
+/**
+ * @brief 获取主日志器
+ */
+#define SYLAR_LOG_ROOT() sylar::LoggerMgr::GetInstance()->getRoot()
+/**
+ * @brief 获取 name 的日志器
+ */
+#define SYLAR_LOG_NAME(name) sylar::LoggerMgr::GetInstance()->getLogger(name)
+
+```
 
 #### **基于流的日志记录**
 ```cpp
@@ -413,6 +475,22 @@ Thread 类是一个封装线程操作的类，主要用于创建和管理线程�
 线程启动时，会执行传入的回调函数 cb。 
 ```
 
+`int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine) (void *), void *arg);`
+
+POSIX线程库中的一个函数，用于创建一个新的线程。
+
+- thread：指向pthread_t类型的指针，用于存储新创建线程的ID。
+- attr：指向pthread_attr_t类型的指针，用于设置新线程的属性，一般传入NULL表示使用默认属性。
+- start_routine：一个函数指针，指向新线程将要执行的函数，该函数的原型为void* (*)(void*)，接受一个void*类型的参数，返回一个void*类型的指针。
+- arg：传递给start_routine函数的参数。
+
+**析构函数 `~Thread()`**
+
+分离结束的线程，释放和线程有关的资源，确保线程安全的终止
+`pthread_detach(m_thread)`
+
+
+
 **线程信息访问：**
 
 - getId()：获取线程的 ID（pid_t 类型）。
@@ -437,6 +515,14 @@ Thread 类是一个封装线程操作的类，主要用于创建和管理线程�
 - wait() 方法会使线程进入等待状态（即等待信号量）。
 - notify() 方法会释放信号量，通知一个等待的线程。
 信号量是通过 sem_t 类型实现的，sem_t 是 POSIX 标准定义的信号量类型，通常用于进程间或线程间的同步。
+
+
+| 特性    | 	信号量（Semaphore）	   | 互斥锁（Mutex）   |
+|-------|--------------------|--------------|
+| 用途    | 	控制多个线程访问资源	       | 保护共享数据       |
+| 状态    | 	计数（可大于 1）可供N个线程访问 | 	只有锁定/解锁     |
+| 线程数   | 	允许多个线程访问          | 	只有 1 个线程可访问 |
+| 适用场景  | 	资源池、限流、生产者-消费者    | 临界区保护        |
 
 ### 3. ScopedLockImpl 模板类
    ScopedLockImpl 是一个局部锁（RAII 锁）模板类，在作用域内自动加锁，离开作用域时自动解锁。它有以下功能：
@@ -463,7 +549,10 @@ Thread 类是一个封装线程操作的类，主要用于创建和管理线程�
     可以访问共享资源，从而避免竞争条件和数据竞争。
 
 - lock()：调用 pthread_mutex_lock() 来加锁。
+  - 如果该互斥锁被其他线程持有，则当前线程阻塞直到该互斥锁被释放重新加锁
 - unlock()：调用 pthread_mutex_unlock() 来解锁。
+  - 释放互斥锁，如果有其他线程等待该锁，则其中一个线程被唤醒继续执行 
+
 Mutex 类同时定义了一个 Lock 类型，表示局部锁。
 
 ### 7. NullMutex 类
@@ -538,19 +627,18 @@ RWMutex 类同时定义了 ReadLock 和 WriteLock 类型，分别表示局部的
 ### Fiber 类
 #### 构造函数：
 
-- `Fiber()`: 创建主协程。
-- `Fiber(std::function<void()> cb, size_t stacksize = 0, bool use_caller = false)`: 创建子协程，传入执行的回调函数、栈大小、是否使用主协程进行调度。
+- `Fiber()`: 创建主协程。主协程无栈
+- `Fiber(std::function<void()> cb, size_t stacksize = 0, bool use_caller = false)`: 创建子协程，传入执行的回调函数、栈大小、是否使用主协程进行调度。子协程有栈
 #### 析构函数：
 
 - `~Fiber()`: 协程析构时会释放栈内存并更新协程计数。
 #### 成员函数：
 
 - `reset(std::function<void()> cb)`: 重置协程的执行函数。
-- `swapIn()`: 将当前协程切换到前台执行。
-- `swapOut()`: 将当前协程切换到后台。 
-- `call()`: 将当前协程切换到执行状态。 
-- `back()`: 将当前协程切换到后台并返回主协程。
-
+- `swapIn()`: 将当前协程切换到前台执行。  ! use_caller使用
+- `swapOut()`: 将当前协程切换到后台。    ! use_caller使用
+- `call()`: 将当前协程切换到执行状态。        ----- use_caller使用
+- `back()`: 将当前协程切换到后台并返回主协程。  ------ use_caller使用
 #### 静态函数：
 
 - `SetThis(Fiber* f)`: 设置当前线程的运行协程。
@@ -558,8 +646,8 @@ RWMutex 类同时定义了 ReadLock 和 WriteLock 类型，分别表示局部的
 - `YiledToReady()`: 将当前协程切换到后台，并设置为 READY 状态。 
 - `YiledToHold()`: 将当前协程切换到后台，并设置为 HOLD 状态。 
 - `TotalFibers()`: 返回当前协程的总数。 
-- `MainFunc()`: 协程执行的入口函数。
-- `CallMainFunc()`: 调度协程执行的函数。
+- `MainFunc()`: 协程执行的入口函数。  ! use_caller使用
+- `CallMainFunc()`: 调度协程执行的函数。   use_caller使用
 
 ### 示例
 ```cpp
@@ -1549,6 +1637,35 @@ public:
 
 `readFromFile(const std::string& name)`
 从文件中读取数据并填充到 ByteArray。
+
+
+---
+
+---
+
+# HTTP协议模块
+
+HTTP/1.1 - API
+
+HttpRequest
+
+HTTP 请求头的基本形式
+```HTML
+GET /index.html HTTP/1.1
+Host: www.example.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Cookie: session_id=123456; username=admin
+
+```
+
+HttpResponse
+
+reagel   mongrel2
+
+
 
 
 

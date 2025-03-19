@@ -13,7 +13,7 @@
 
 namespace sylar {
 
-/// Timer类的比较器 比较两个定时器对象的优先级
+/// Timer类的比较器 比较两个定时器对象的优先级（绝对超时时间）
 bool Timer::Comparator::operator()(const Timer::ptr &lhs,
             const Timer::ptr &rhs) const {
     if(!lhs && !rhs){ return false;}

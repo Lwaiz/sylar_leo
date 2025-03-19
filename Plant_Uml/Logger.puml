@@ -1,0 +1,105 @@
+@startuml
+'https://plantuml.com/class-diagram
+
+@startuml
+
+package "LogLevel" {
+    class LogLevel {
+        +enum Level
+        +ToString(Level)
+        +FromString(string)
+    }
+}
+
+package "LogEvent" {
+    class LogEvent {
+        +string getFile()
+        +int32_t getLine()
+        +uint32_t getElapse()
+        +uint32_t getThreadId()
+        +uint32_t getFiberId()
+        +uint64_t getTime()
+        +string getContent()
+        +string getThreadName()
+        +LogLevel::Level getLevel()
+        +std::stringstream& getSS()
+        +void format(const char* fmt, ...)
+    }
+}
+
+package "LogEventWrap" {
+    class LogEventWrap {
+        +LogEvent::ptr getEvent()
+        +std::stringstream& getSS()
+    }
+}
+
+package "LogFormatter" {
+    class LogFormatter {
+        +string format(Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event)
+        +std::ostream& format(std::ostream& ofs, Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event)
+        +bool isError()
+    }
+
+    class FormatItem {
+        +virtual void format(std::ostream& os, Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event)
+    }
+}
+
+package "LogAppender" {
+    class LogAppender {
+        +virtual void log(Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event)
+        +virtual std::string toYamlString()
+        +void setFormatter(LogFormatter::ptr val)
+        +LogFormatter::ptr getFormatter()
+    }
+
+    class StdoutLogAppender {
+        +void log(Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event)
+        +std::string toYamlString()
+    }
+
+    class FileLogAppender {
+        +void log(Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event)
+        +std::string toYamlString()
+    }
+}
+
+package "Logger" {
+    class Logger {
+        +void log(LogLevel::Level level, LogEvent::ptr event)
+        +void addAppender(LogAppender::ptr appender)
+        +void delAppender(LogAppender::ptr appender)
+        +void clearAppenders()
+        +LogLevel::Level getLevel()
+        +void setLevel(LogLevel::Level val)
+        +string getName()
+        +void setFormatter(LogFormatter::ptr val)
+        +LogFormatter::ptr getFormatter()
+        +string toYamlString()
+    }
+
+    Logger --> LogEventWrap
+    Logger --> LogAppender
+    Logger --> LogFormatter
+}
+
+package "LoggerManager" {
+    class LoggerManager {
+        +Logger::ptr getRoot()
+        +Logger::ptr getLogger(string name)
+    }
+}
+
+LoggerManager --> Logger
+
+Logger "1" *-- "*" LogEvent : contains
+Logger "1" o-- "1" LogFormatter : uses
+Logger "1" *-- "*" LogEventWrap : submits
+LogEvent "1" o-- "1" LogFormatter : uses
+LogEvent "1" *-- "1" LogLevel : has
+LogEventWrap "1" *-- "1" LogEvent : wraps
+LoggerManager "1" *-- "*" Logger : manages
+
+
+@enduml

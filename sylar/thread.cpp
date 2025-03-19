@@ -2,7 +2,7 @@
   ******************************************************************************
   * @file           : thread.cpp
   * @author         : 18483
-  * @brief          : None
+  * @brief          : 线程模块
   * @attention      : None
   * @date           : 2025/2/5
   ******************************************************************************
@@ -56,7 +56,7 @@ Thread::Thread(std::function<void()> cb, const std::string &name)
                 << " name=" << name;
         throw std::logic_error("pthread_create error");
     }
-    //m_semaphore.wait();
+    m_semaphore.wait();
 }
 
 Thread::~Thread(){
@@ -91,8 +91,8 @@ void* Thread::run(void* arg){
     std::function<void()> cb;
     // 将回调函数从成员变量 m_cb 交换到 cb 变量中
     cb.swap(thread->m_cb);
-
-    //thread->m_semaphore.notify();
+    // 在出构造函数之前，确保线程先跑起来，保证能够初始化id
+    thread->m_semaphore.notify();
 
     cb();  // 执行回调函数
     return 0;  // 返回

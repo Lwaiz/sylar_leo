@@ -73,9 +73,9 @@ uint64_t Fiber::GetFiberId() {
     return 0;
 }
 
-///无参构造 构造主协程对象
+///无参构造 构造主协程对象（私有）
 Fiber::Fiber() {
-    /*
+    /**
      * - 主协程没有独立栈，与线程栈共享
      * - 主协程上下文为线程上下文，协程切换时不会涉及上下文切换
      */
@@ -119,13 +119,14 @@ Fiber::Fiber(std::function<void()> cb, size_t stacksize, bool use_caller)
 
     // 指明 context 入口函数 创建上下文
     if(!use_caller) {
-        makecontext(&m_ctx, &Fiber::MainFunc, 0);
+        makecontext(&m_ctx, &Fiber::MainFunc, 0);   // swapout
     } else {
-        makecontext(&m_ctx, &Fiber::CallMainFunc, 0);
+        makecontext(&m_ctx, &Fiber::CallMainFunc, 0);  // back
     }
     // 输出调试信息，协程构造完成
     SYLAR_LOG_DEBUG(g_logger) << "Fiber::Fiber id=" << m_id;
 }
+
 
 ///释放协程 栈空间
 Fiber::~Fiber(){

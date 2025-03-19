@@ -48,7 +48,7 @@ public:
     /**
      * @brief 返回协程调度器名称
      */
-    const std::string& getName() const {return m_name;}
+    const std::string& getName() const { return m_name; }
 
     /**
      * @brief 返回当前协程调度器

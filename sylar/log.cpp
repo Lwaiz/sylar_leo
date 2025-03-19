@@ -82,7 +82,7 @@ LogEventWrap::LogEventWrap(LogEvent::ptr e)
 
 /**
  * @brief 析构自动调用 调用日志器的 log 方法，记录日志
- *        RAII（资源获取即初始化）思想
+ *        RALL（资源获取即初始化）思想
  *        用匿名对象析构函数进行流式输出
  */
 LogEventWrap::~LogEventWrap(){

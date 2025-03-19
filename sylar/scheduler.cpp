@@ -28,6 +28,7 @@ static thread_local Fiber* t_scheduler_fiber = nullptr;
  * use_caller = false 新建一个调度线程，调度线程的主协程为调度协程，调度线程上有 1.调度协程，2.任务子协程
  */
 
+/// 初始化协程调度器
 Scheduler::Scheduler(size_t threads, bool use_caller, const std::string &name)
     :m_name(name){
     SYLAR_ASSERT(threads > 0);  // 确保线程数大于 0
@@ -35,7 +36,7 @@ Scheduler::Scheduler(size_t threads, bool use_caller, const std::string &name)
     // 如果使用主协程(当前线程)
     if(use_caller) {
         sylar::Fiber::GetThis();  // 获取当前协程
-        --threads; // 主协程已占用一个线程
+        --threads; // 主协程已占用一个线程，少创建一个新线程
 
         SYLAR_ASSERT(GetThis() == nullptr); // 确保当前没有调度器实例
         t_scheduler = this; // 设置当前线程的调度器实例
@@ -51,7 +52,7 @@ Scheduler::Scheduler(size_t threads, bool use_caller, const std::string &name)
 
     } else { // use_caller == false
         // 没有主协程的情况，rootThread设置为-1
-        m_rootThread = -1; // 未指定主线程
+        m_rootThread = -1; // 未指定主调度线程
     }
     m_threadCount = threads;
 }
@@ -125,7 +126,7 @@ void Scheduler::stop(){
 
     m_stopping = true;  // 设置调度器正在停止
 
-    // 唤醒所有调度线程
+    // 唤醒所有调度的线程
     for(size_t i = 0; i < m_threadCount; ++i){
         tickle();
     }
@@ -133,7 +134,8 @@ void Scheduler::stop(){
     if(m_rootFiber){
         tickle();
     }
-
+    // 如果 use_caller 且调度协程存在 则返回到调度协程 m_rootFiber 继续执行剩余调度任务
+    // 如果 !use_caller 不需要  Scheduler 线程会自己结束
     if(m_rootFiber){
         if(!stopping()){
             m_rootFiber->call();

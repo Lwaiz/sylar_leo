@@ -333,6 +333,9 @@ public:
 };
 
 
+/// ***************************************************************** ///
+
+
 /**
  * @brief 配置参数模板子类，保存对应类型的参数值
  * @details T 参数的具体类型
@@ -342,7 +345,7 @@ public:
  *       使用模板偏特化
  */
 template <class T, class FromStr = LexicalCast<std::string, T>
-                 , class ToStr = LexicalCast<T, std::string>>
+                 , class ToStr = LexicalCast<T, std::string> >
 class ConfigVar : public ConfigVarBase{
 public:
 
