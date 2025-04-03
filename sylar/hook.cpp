@@ -120,92 +120,158 @@ static ssize_t do_io(int fd, OriginFun fun, const char* hook_fun_name,
      * 9.若数据来了 则 retry 重新操作
      */
     // 如果不需要hook 直接返回原始接口
-    if(!sylar::t_hook_enable){
-        // forward完美转发，可以将传入的可变参数args以原始类型的方式传递给函数fun
-        // 可以避免不必要的类型转换和拷贝，提高代码的效率和性能
+//    if(!sylar::t_hook_enable){
+//        // forward完美转发，可以将传入的可变参数args以原始类型的方式传递给函数fun
+//        // 可以避免不必要的类型转换和拷贝，提高代码的效率和性能
+//        return fun(fd, std::forward<Args>(args)...);
+//    }
+//
+//    // 获取 fd 对应的 FdCtx
+//    sylar::FdCtx::ptr ctx = sylar::FdMgr::GetInstance()->get(fd);
+//    // 没有文件 直接返回原始接口
+//    if(!ctx) {
+//        return fun(fd, std::forward<Args>(args)...);
+//    }
+//
+//    // 检查句柄是否关闭
+//    if(ctx->isClose()){
+//        errno = EBADF;
+//        return -1;
+//    }
+//
+//    // 如果不是socket或者用户设置了非阻塞 直接调用原始函数
+//    if(!ctx->isSocket() || ctx->getUserNonblock()) {
+//        return fun(fd, std::forward<Args>(args)...);
+//    }
+//
+//    // 获取超时时间 设置超时条件
+//    uint64_t to = ctx->getTimeout(timeout_so);
+//    std::shared_ptr<timer_info> tinfo(new timer_info);
+//
+//retry:
+//
+//    // 先调用原始函数读/写 数据 若函数返回值有效 则直接返回
+//    ssize_t n = fun(fd, std::forward<Args>(args)...);
+//    // 中断 则重试
+//    while(n == -1 && errno == EINTR) {
+//        n = fun(fd, std::forward<Args>(args)...);
+//    }
+//    //若为阻塞状态
+//    if(n == -1 && errno == EAGAIN) {
+//        sylar::IOManager* iom = sylar::IOManager::GetThis();
+//        sylar::Timer::ptr timer;
+//        // tinfo 的弱指针 可以用来判断tinfo是否已经销毁
+//        std::weak_ptr<timer_info> winfo(tinfo);
+//
+//        // 若超时时间不为-1， 则设置定时器
+//        if(to != (uint64_t)-1) {
+//            // 添加条件定时器  ---to时间消息还没来就触发回调
+//            timer = iom->addConditionTimer(to, [winfo, fd, iom, event](){
+//                auto t = winfo.lock();
+//                // tinfo失效 || 设了错误   定时器失效了
+//                if(!t || t->cancelled) {
+//                    return;
+//                }
+//                t->cancelled = ETIMEDOUT; // 没错误的话设置为超时而失败
+//                // 取消事件进行强制唤醒
+//                iom->cancleEvent(fd, (sylar::IOManager::Event)(event));
+//            }, winfo);
+//        }
+//        // 添加事件
+//        int rt = iom->addEvent(fd, (sylar::IOManager::Event)(event));
+//        // 添加失败
+//        if(rt) {
+//            SYLAR_LOG_ERROR(g_logger) << hook_fun_name << " addEvent("
+//                << fd << ", " << event << ")";
+//            if(timer) { timer->cancle(); }  // 取消定时器
+//            return -1;
+//        } else {
+//            /* addEvent 成功，把执行时间让出来
+//             *   只有两种情况会回来:
+//             *       1) 超时了， timer cancelEvent triggerEvent 强制唤醒
+//             *       2) addEvent 数据回来了就会唤醒回来
+//             */
+//            //SYLAR_LOG_DEBUG(g_logger) << "do_io<" << hook_fun_name << ">";
+//            sylar::Fiber::YiledToHold();
+//            //SYLAR_LOG_DEBUG(g_logger) << "do_io<" << hook_fun_name << ">";
+//            if(timer) { timer->cancle(); }
+//            // 从定时任务唤醒 超时 失败
+//            if(tinfo->cancelled) {
+//                errno = tinfo->cancelled;
+//                return -1;
+//            }
+//            // 数据来了就直接重新操作
+//            goto retry;
+//        }
+//    }
+//    return n;
+//}
+    if(!sylar::t_hook_enable) {
         return fun(fd, std::forward<Args>(args)...);
     }
 
-    // 获取 fd 对应的 FdCtx
     sylar::FdCtx::ptr ctx = sylar::FdMgr::GetInstance()->get(fd);
-    // 没有文件 直接返回原始接口
     if(!ctx) {
         return fun(fd, std::forward<Args>(args)...);
     }
 
-    // 检查句柄是否关闭
-    if(ctx->isClose()){
+    if(ctx->isClose()) {
         errno = EBADF;
         return -1;
     }
 
-    // 如果不是socket或者用户设置了非阻塞 直接调用原始函数
     if(!ctx->isSocket() || ctx->getUserNonblock()) {
         return fun(fd, std::forward<Args>(args)...);
     }
 
-    // 获取超时时间 设置超时条件
     uint64_t to = ctx->getTimeout(timeout_so);
     std::shared_ptr<timer_info> tinfo(new timer_info);
 
-retry:
-
-    // 先调用原始函数读/写 数据 若函数返回值有效 则直接返回
+    retry:
     ssize_t n = fun(fd, std::forward<Args>(args)...);
-    // 中断 则重试
     while(n == -1 && errno == EINTR) {
         n = fun(fd, std::forward<Args>(args)...);
     }
-    //若为阻塞状态
     if(n == -1 && errno == EAGAIN) {
         sylar::IOManager* iom = sylar::IOManager::GetThis();
         sylar::Timer::ptr timer;
-        // tinfo 的弱指针 可以用来判断tinfo是否已经销毁
         std::weak_ptr<timer_info> winfo(tinfo);
 
-        // 若超时时间不为-1， 则设置定时器
         if(to != (uint64_t)-1) {
-            // 添加条件定时器  ---to时间消息还没来就触发回调
-            timer = iom->addConditionTimer(to, [winfo, fd, iom, event](){
+            timer = iom->addConditionTimer(to, [winfo, fd, iom, event]() {
                 auto t = winfo.lock();
-                // tinfo失效 || 设了错误   定时器失效了
                 if(!t || t->cancelled) {
                     return;
                 }
-                t->cancelled = ETIMEDOUT; // 没错误的话设置为超时而失败
-                // 取消事件进行强制唤醒
+                t->cancelled = ETIMEDOUT;
                 iom->cancleEvent(fd, (sylar::IOManager::Event)(event));
             }, winfo);
         }
-        // 添加事件
+
         int rt = iom->addEvent(fd, (sylar::IOManager::Event)(event));
-        // 添加失败
-        if(rt) {
+        if(SYLAR_UNLIKELY(rt)) {
             SYLAR_LOG_ERROR(g_logger) << hook_fun_name << " addEvent("
-                << fd << ", " << event << ")";
-            if(timer) { timer->cancle(); }  // 取消定时器
+                                      << fd << ", " << event << ")";
+            if(timer) {
+                timer->cancle();
+            }
             return -1;
         } else {
-            /* addEvent 成功，把执行时间让出来
-             *   只有两种情况会回来:
-             *       1) 超时了， timer cancelEvent triggerEvent 强制唤醒
-             *       2) addEvent 数据回来了就会唤醒回来
-             */
-            //SYLAR_LOG_DEBUG(g_logger) << "do_io<" << hook_fun_name << ">";
             sylar::Fiber::YiledToHold();
-            //SYLAR_LOG_DEBUG(g_logger) << "do_io<" << hook_fun_name << ">";
-            if(timer) { timer->cancle(); }
-            // 从定时任务唤醒 超时 失败
+            if(timer) {
+                timer->cancle();
+            }
             if(tinfo->cancelled) {
                 errno = tinfo->cancelled;
                 return -1;
             }
-            // 数据来了就直接重新操作
             goto retry;
         }
     }
+
     return n;
 }
+
 
 
 
@@ -376,7 +442,6 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
     return connect_with_timeout(sockfd, addr, addrlen, sylar::s_connect_timeout);
 }
 
-
 int accept(int s, struct sockaddr *addr, socklen_t *addrlen) {
     int fd = do_io(s, accept_f, "accept", sylar::IOManager::READ, SO_RCVTIMEO, addr, addrlen);
     if(fd >= 0) {
@@ -389,23 +454,19 @@ ssize_t read(int fd, void *buf, size_t count) {
     return do_io(fd, read_f, "read", sylar::IOManager::READ, SO_RCVTIMEO, buf, count);
 }
 
-
 ssize_t readv(int fd, const struct iovec *iov, int iovcnt) {
     return do_io(fd, readv_f, "readv", sylar::IOManager::READ, SO_RCVTIMEO, iov, iovcnt);
 }
-
 
 ssize_t recv(int sockfd, void *buf, size_t len, int flags) {
     return do_io(sockfd, recv_f, "recv", sylar::IOManager::READ, SO_RCVTIMEO, buf, len, flags);
 }
 
-
-ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen){
+ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen) {
     return do_io(sockfd, recvfrom_f, "recvfrom", sylar::IOManager::READ, SO_RCVTIMEO, buf, len, flags, src_addr, addrlen);
 }
 
-
-ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags){
+ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags) {
     return do_io(sockfd, recvmsg_f, "recvmsg", sylar::IOManager::READ, SO_RCVTIMEO, msg, flags);
 }
 

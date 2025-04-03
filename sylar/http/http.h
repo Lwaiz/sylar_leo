@@ -9,8 +9,8 @@
   */
 
 
-#ifndef SYLAR_HTTP_H
-#define SYLAR_HTTP_H
+#ifndef __SYLAR_HTTP_HTTP_H__
+#define __SYLAR_HTTP_HTTP_H__
 
 #include <memory>
 #include <string>
@@ -137,63 +137,72 @@ namespace http {
   XX(511, NETWORK_AUTHENTICATION_REQUIRED, Network Authentication Required) \
 
 /**
- * @brief HTTP方法枚举  映射到枚举值
- */
+* @brief HTTP方法枚举
+*/
 enum class HttpMethod {
 #define XX(num, name, string) name = num,
-            HTTP_METHOD_MAP(XX)
+    HTTP_METHOD_MAP(XX)
 #undef XX
-            INVALID_METHOD
+    INVALID_METHOD
 };
 
 /**
- * @brief HTTP状态枚举  映射到枚举值
- */
+* @brief HTTP状态枚举
+*/
 enum class HttpStatus {
 #define XX(code, name, desc) name = code,
-            HTTP_STATUS_MAP(XX)
+    HTTP_STATUS_MAP(XX)
 #undef XX
 };
 
 /**
- * @brief 将字符串方法名或者指针转换成HTTP方法枚举
- * @return HTTP方法枚举
- */
+* @brief 将字符串方法名转成HTTP方法枚举
+* @param[in] m HTTP方法
+* @return HTTP方法枚举
+*/
 HttpMethod StringToHttpMethod(const std::string& m);
+
+/**
+* @brief 将字符串指针转换成HTTP方法枚举
+* @param[in] m 字符串方法枚举
+* @return HTTP方法枚举
+*/
 HttpMethod CharsToHttpMethod(const char* m);
 
 /**
- * @brief  将HTTP方法枚举转换成字符串
- * @param m HTTP方法枚举
- * @return 字符串
- */
+* @brief 将HTTP方法枚举转换成字符串
+* @param[in] m HTTP方法枚举
+* @return 字符串
+*/
 const char* HttpMethodToString(const HttpMethod& m);
 
 /**
- * @brief  将HTTP状态枚举转换成字符串
- * @param s HTTP状态枚举
- * @return 字符串
- */
+* @brief 将HTTP状态枚举转换成字符串
+* @param[in] m HTTP状态枚举
+* @return 字符串
+*/
 const char* HttpStatusToString(const HttpStatus& s);
 
 /**
- * @brief 大小写不敏感的比较仿函数
- */
+* @brief 忽略大小写比较仿函数
+*/
 struct CaseInsensitiveLess {
-    /// 忽略大小写比较字符串
+    /**
+     * @brief 忽略大小写比较字符串
+     */
     bool operator()(const std::string& lhs, const std::string& rhs) const;
 };
 
 /**
- * @brief 获取MAP中的key值，并转换成对应类型，返回是否成功
- * @param m Map数据结构
- * @param key 关键字
- * @param val 保存转换后的值
- * @param def 默认值
- * @return
- *          @retval true 转换成功 val为对应的值
- *          @retval false 不存在或者转换失败 val = def
- */
+* @brief 获取Map中的key值,并转成对应类型,返回是否成功
+* @param[in] m Map数据结构
+* @param[in] key 关键字
+* @param[out] val 保存转换后的值
+* @param[in] def 默认值
+* @return
+*      @retval true 转换成功, val 为对应的值
+*      @retval false 不存在或者转换失败 val = def
+*/
 template<class MapType, class T>
 bool checkGetAs(const MapType& m, const std::string& key, T& val, const T& def = T()) {
     auto it = m.find(key);
@@ -211,9 +220,12 @@ bool checkGetAs(const MapType& m, const std::string& key, T& val, const T& def =
 }
 
 /**
- * @brief 获取MAP中的key值，并转换成对应类型
- * @return 如果存在且转换成功返回对应的值 否则返回默认值
- */
+* @brief 获取Map中的key值,并转成对应类型
+* @param[in] m Map数据结构
+* @param[in] key 关键字
+* @param[in] def 默认值
+* @return 如果存在且转换成功返回对应的值,否则返回默认值
+*/
 template<class MapType, class T>
 T getAs(const MapType& m, const std::string& key, const T& def = T()) {
     auto it = m.find(key);
@@ -226,7 +238,6 @@ T getAs(const MapType& m, const std::string& key, const T& def = T()) {
     }
     return def;
 }
-
 
 class HttpResponse;
 /**
@@ -272,7 +283,7 @@ public:
     const std::string& getQuery() const {return m_query;}
 
     /**
-     * @brief 返回HTTP请求的消息头MAP
+     * @brief 返回HTTP请求的消息MAP
      */
     const std::string& getBody() const {return m_body;}
 
@@ -424,26 +435,29 @@ public:
      * @param[in] key 关键字
      */
     void delHeader(const std::string& key);
+
     /**
      * @brief 删除HTTP请求的请求参数
      * @param[in] key 关键字
      */
     void delParam(const std::string& key);
+
     /**
      * @brief 删除HTTP请求的Cookie参数
      * @param[in] key 关键字
      */
     void delCookie(const std::string& key);
 
-
 /********************* ** 检查是否含有特定请求头、参数、Cookie ** **********************/
+
     /**
-    * @brief 判断HTTP请求的头部参数是否存在
-    * @param[in] key 关键字
-    * @param[out] val 如果存在,val非空则赋值
-    * @return 是否存在
-    */
+     * @brief 判断HTTP请求的头部参数是否存在
+     * @param[in] key 关键字
+     * @param[out] val 如果存在,val非空则赋值
+     * @return 是否存在
+     */
     bool hasHeader(const std::string& key, std::string* val = nullptr);
+
     /**
      * @brief 判断HTTP请求的请求参数是否存在
      * @param[in] key 关键字
@@ -461,15 +475,15 @@ public:
     bool hasCookie(const std::string& key, std::string* val = nullptr);
 
     /**
-     * @brief 检查并获取HTTP请求的头部参数
-     * @tparam T 转换类型
-     * @param key 关键字
-     * @param val 返回值
-     * @param def 默认值
-     * @return 如果存在且转换成功返回true，否则返回val=def
-     */
+    * @brief 检查并获取HTTP请求的头部参数
+    * @tparam T 转换类型
+    * @param[in] key 关键字
+    * @param[out] val 返回值
+    * @param[in] def 默认值
+    * @return 如果存在且转换成功返回true,否则失败val=def
+    */
     template<class T>
-    bool checkGetHeaderAs(const std::string& key, T& val, const T& def = T()){
+    bool checkGetHeaderAs(const std::string& key, T& val, const T& def = T()) {
         return checkGetAs(m_headers, key, val, def);
     }
 
@@ -481,9 +495,10 @@ public:
      * @return 如果存在且转换成功返回对应的值,否则返回def
      */
     template<class T>
-    T getHeaderAs(const std::string& key, const T& def = T()){
+    T getHeaderAs(const std::string& key, const T& def = T()) {
         return getAs(m_headers, key, def);
     }
+
     /**
      * @brief 检查并获取HTTP请求的请求参数
      * @tparam T 转换类型
@@ -493,11 +508,12 @@ public:
      * @return 如果存在且转换成功返回true,否则失败val=def
      */
     template<class T>
-    bool checkGetParamAs(const std::string& key, T& val, const T& def = T()){
+    bool checkGetParamAs(const std::string& key, T& val, const T& def = T()) {
         initQueryParam();
         initBodyParam();
         return checkGetAs(m_params, key, val, def);
     }
+
     /**
      * @brief 获取HTTP请求的请求参数
      * @tparam T 转换类型
@@ -535,7 +551,7 @@ public:
      */
     template<class T>
     T getCookieAs(const std::string& key, const T& def = T()) {
-        //initCookies();
+        initCookies();
         return getAs(m_cookies, key, def);
     }
 
@@ -560,19 +576,19 @@ public:
     void initCookies();
 
 private:
-    ///HTTP方法
+    /// HTTP方法
     HttpMethod m_method;
-    ///HTTP版本
+    /// HTTP版本
     uint8_t m_version;
-    ///是否自动关闭
+    /// 是否自动关闭
     bool m_close;
-    ///是否为websocket
+    /// 是否为websocket
     bool m_websocket;
 
     uint8_t m_parserParamFlag;
-    ///请求路径
+    /// 请求路径
     std::string m_path;
-    ///请求参数
+    /// 请求参数
     std::string m_query;
     /// 请求fragment
     std::string m_fragment;

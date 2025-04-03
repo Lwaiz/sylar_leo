@@ -17,6 +17,11 @@ include_directories(/usr/local/include)
 
 link_directories(/usr/local/lib)
 
+find_package(OpenSSL REQUIRED)
+if(OPENSSL_FOUND)
+        include_directories(${OPENSSL_INCLUDE_DIR})
+endif()
+
 set(LIB_SRC
         sylar/log.cpp
         sylar/util.cpp
@@ -36,7 +41,17 @@ set(LIB_SRC
         sylar/http/http.cpp
         sylar/http/http11_parser.cpp
         sylar/http/httpclient_parser.cpp
+        sylar/http/http_parser.cpp
+        sylar/tcp_server.cpp
+        sylar/stream.cpp
+        sylar/streams/socket_stream.cpp
+        sylar/http/http_session.cpp
+        sylar/http/http_server.cpp
+        sylar/http/servlet.cpp
+        sylar/http/http_connection.cpp
         )
+
+
 
 #生成共享库
 add_library(sylar SHARED ${LIB_SRC})
@@ -46,6 +61,9 @@ set(LIBS
         dl
         pthread
         yaml-cpp
+        ${ZLIB_LIBRARIES}
+        ${OPENSSL_LIBRARIES}
+        ${PROTOBUF_LIBRARIES}
 )
 
 #force_redefine_file_macro_for_sources(sylar)
@@ -100,7 +118,25 @@ add_executable(test_http tests/test_http.cpp)
 add_dependencies(test_http sylar)
 target_link_libraries(test_http sylar "${LIBS}")
 
+add_executable(test_http_parser tests/test_http_parser.cpp)
+add_dependencies(test_http_parser sylar)
+target_link_libraries(test_http_parser sylar "${LIBS}")
+
+add_executable(test_tcp_server tests/test_tcp_server.cpp)
+add_dependencies(test_tcp_server sylar)
+target_link_libraries(test_tcp_server sylar "${LIBS}")
+
+
+
+
+
+
+
+
+
+
+
+
 #设置输出路径
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
-add_executable(mytest tests/mytest.cpp)

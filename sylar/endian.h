@@ -69,7 +69,7 @@ byteswap(T value){
  */
     template<class T>
     T byteswapOnLittleEndian(T t){
-        return byteswap(t);
+        return t;
     }
 
 /**
@@ -77,7 +77,7 @@ byteswap(T value){
  */
     template<class T>
     T byteswapOnBigEndian(T t){
-        return t;
+        return byteswap(t);
     }
 
 
@@ -89,7 +89,7 @@ byteswap(T value){
  */
     template<class T>
     T byteswapOnLittleEndian(T t){
-        return t;
+        return byteswap(t);
     }
 
 /**
@@ -97,7 +97,7 @@ byteswap(T value){
  */
     template<class T>
     T byteswapOnBigEndian(T t){
-        return byteswap(t);
+        return t;
     }
 
 

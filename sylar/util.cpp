@@ -128,43 +128,6 @@ std::string ToLower(const std::string& name) {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 std::string StringUtil::Format(const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);

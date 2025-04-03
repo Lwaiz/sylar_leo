@@ -600,9 +600,9 @@ RWMutex 类同时定义了 ReadLock 和 WriteLock 类型，分别表示局部的
 ## 功能特性
 
 ---
-基于 C++ 的协程（Fiber）模块，旨在提供轻量级的线程切换支持。
-该模块允许在多线程环境中高效地创建和调度协程，
-能够通过 ucontext 实现上下文切换，支持协程的创建、执行、暂停以及销毁。
+   基于 C++ 的协程（Fiber）模块，旨在提供轻量级的线程切换支持。
+   该模块允许在多线程环境中高效地创建和调度协程， 
+   能够通过 ucontext 实现上下文切换，支持协程的创建、执行、暂停以及销毁。
 
 - 轻量级协程管理：每个协程的栈大小和运行时信息都是独立管理的，减少线程切换的开销。
 - 灵活的协程调度：支持协程的创建、状态切换以及调度。 
@@ -1643,7 +1643,7 @@ public:
 
 ---
 
-# HTTP协议模块
+# HTTP模块
 
 HTTP/1.1 - API
 
@@ -1663,12 +1663,200 @@ Cookie: session_id=123456; username=admin
 
 HttpResponse
 
-reagel   mongrel2
+reagel 有限状态机解析(高效)  github: mongrel2
+
+HttpParaser  协议解析
+
+## HTTP 协议解析
+
+`http.h` 定义了一个 HTTP 相关的 C++ 结构体封装，主要用于处理 HTTP 请求和响应
+
+1.HTTP 方法和状态码枚举
+
+- 通过 `HTTP_METHOD_MAP` 和 `HTTP_STATUS_MAP` 宏定义 HTTP 方法和状态码
+- 提供了方法 `StringToHttpMethod`、`CharsToHttpMethod`、`HttpMethodToString` 和 `HttpStatusToString` 进行转换
 
 
+[li@manjaroli bin]$ /home/li/project/sylar/bin/test_socket
+2025-04-02 13:24:30     6979    UNKNOW  0       [DEBUG] [system]        sylar/fiber.cpp:61      Fiber::Fiber main
+2025-04-02 13:24:30     6979    UNKNOW  0       [DEBUG] [system]        sylar/fiber.cpp:92      Fiber::Fiber id = 1
+2025-04-02 13:24:30     6979    UNKNOW  0       [INFO]  [system]        sylar/scheduler.cpp:90  0x7ffd13294770  stopped
+2025-04-02 13:24:30     6979    UNKNOW  1       [DEBUG] [system]        sylar/scheduler.cpp:139 run
+2025-04-02 13:24:30     6979    UNKNOW  1       [DEBUG] [system]        sylar/fiber.cpp:92      Fiber::Fiber id = 2
+2025-04-02 13:24:30     6979    UNKNOW  1       [DEBUG] [system]        sylar/fiber.cpp:92      Fiber::Fiber id = 3
+2025-04-02 13:24:30     6979    UNKNOW  3       [INFO]  [system]        sylar/address.cpp:73    host: www.baidu.com
+2025-04-02 13:24:30     6979    UNKNOW  3       [ERROR] [system]        sylar/iomanager.cpp:257 epoll_ctl(3):2,6,0):-1(2) (No such file or directory)
+2025-04-02 13:24:30     6979    UNKNOW  3       [DEBUG] [system]        sylar/address.cpp:113   960950894
+2025-04-02 13:24:30     6979    UNKNOW  3       [DEBUG] [system]        sylar/address.cpp:113   960950894
+2025-04-02 13:24:30     6979    UNKNOW  3       [DEBUG] [system]        sylar/address.cpp:113   960950894
+2025-04-02 13:24:30     6979    UNKNOW  3       [DEBUG] [system]        sylar/address.cpp:113   356905582
+2025-04-02 13:24:30     6979    UNKNOW  3       [DEBUG] [system]        sylar/address.cpp:113   356905582
+2025-04-02 13:24:30     6979    UNKNOW  3       [DEBUG] [system]        sylar/address.cpp:113   356905582
+2025-04-02 13:24:30     6979    UNKNOW  3       [INFO]  [root]  tests/test_socket.cpp:11        get address: 110.242.70.57:0
+2025-04-02 13:24:30     6979    UNKNOW  2       [DEBUG] [system]        sylar/iomanager.cpp:314 idle
+2025-04-02 13:24:30     6979    UNKNOW  3       [ERROR] [root]  tests/test_socket.cpp:21        connect 110.242.70.57:80 connected
+2025-04-02 13:24:30     6979    UNKNOW  3       [DEBUG] [system]        sylar/hook.cpp:124      do_io<recv>
+2025-04-02 13:24:30     6979    UNKNOW  3       [DEBUG] [system]        sylar/hook.cpp:160      do_io<recv>
+2025-04-02 13:24:30     6979    UNKNOW  3       [DEBUG] [system]        sylar/hook.cpp:162      do_io<recv>
+2025-04-02 13:24:30     6979    UNKNOW  3       [INFO]  [root]  tests/test_socket.cpp:38        HTTP/1.0 200 OK
+Accept-Ranges: bytes
+Cache-Control: no-cache
+Content-Length: 29506
+Content-Type: text/html
+Date: Wed, 02 Apr 2025 05:24:30 GMT
+P3p: CP=" OTI DSP COR IVA OUR IND COM "
+P3p: CP=" OTI DSP COR IVA OUR IND COM "
+Pragma: no-cache
+Server: BWS/1.1
+Set-Cookie: BAIDUID=03C6AD8FA7877BED5853E5BEEE86EA8D:FG=1; expires=Thu, 31-Dec-37 23:55:55 GMT; max-age=2147483647; path=/; domain=.baidu.com
+Set-Cookie: BIDUPSID=03C6AD8FA7877BED5853E5BEEE86EA8D; expires=Thu, 31-Dec-37 23:55:55 GMT; max-age=2147483647; path=/; domain=.baidu.com
+Set-Cookie: PSTM=1743571470; expires=Thu, 31-Dec-37 23:55:55 GMT; max-age=2147483647; path=/; domain=.baidu.com
+Set-Cookie: BAIDUID=03C6AD8FA7877BEDB737AE8D3FE9DE32:FG=1; max-age=31536000; expires=Thu, 02-Apr-26 05:24:30 GMT; domain=.baidu.com; path=/; version=1; comment=bd
+Traceid: 1743571470344844929011468794409823318931
+Vary: Accept-Encoding
+X-Ua-Compatible: IE=Edge,chrome=1
+X-Xss-Protection: 1;mode=block
 
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta content="always" name="referrer" />
+    <meta
+        name="description"
+        content="全球领先的中文搜索引擎、致力于让网民更便捷地获取信息，找到所求。百度超过千亿的中文网页数据库，可以瞬间找到相关的搜索结果。"
+    />
+    <link rel="shortcut icon" href="//www.baidu.com/favicon.ico" type="image/x-icon" />
+    <link
+        rel="search"
+        type="application/opensearchdescription+xml"
+        href="//www.baidu.com/content-search.xml"
+        title="百度搜索"
+    />
+    <title>百度一下，你就知道</title>
+    <style type="text/css">
+        body {
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            background: #fff;
+            height: 100%;
+        }
 
+        html {
+            overflow-y: auto;
+            color: #000;
+            overflow: -moz-scrollbars;
+            height: 100%;
+        }
 
+        body, input {
+            font-size: 12px;
+            font-family: "PingFang SC", Arial, "Microsoft YaHei", sans-serif;
+        }
 
+        a {
+            text-decoration: none;
+        }
 
+        a:hover {
+            text-decoration: underline;
+        }
+
+        img {
+            border: 0;
+            -ms-interpolation-mode: bicubic;
+        }
+
+        input {
+            font-size: 100%;
+            border: 0;
+        }
+
+        body, form {
+            position: relative;
+            z-index: 0;
+        }
+
+        #wrapper {
+            height: 100%;
+        }
+
+        #head .s-ps-islite {
+            _padding-bottom: 370px;
+        }
+
+        #head_wrapper.s-ps-islite {
+            padding-bottom: 370px;
+        }
+
+        #head_wrapper.s-ps-islite .s_form {
+            position: relative;
+            z-index: 1;
+        }
+
+        #head_wrapper.s-ps-islite .fm {
+            position: absolute;
+            bottom: 0;
+        }
+
+        #head_wrapper.s-ps-islite .s-p-top {
+            position: absolute;
+            bottom: 40px;
+            width: 100%;
+            height: 181px;
+        }
+
+        #head_wrapper.s-ps-islite #s_lg_img {
+            position: static;
+            margin: 33px auto 0 auto;
+            left: 50%;
+        }
+
+        #form {
+            z-index: 1;
+        }
+
+        .s_form_wrapper {
+            height: 100%;
+        }
+
+        #lh {
+            margin: 16px 0 5px;
+            word-spacing: 3px;
+        }
+
+        .c-font-normal {
+            font: 13px/23px Arial, sans-serif;
+        }
+
+        .c-color-t {
+            color: #222;
+        }
+
+        .c-btn,
+        .c-btn:visited {
+            color: #333 !important;
+        }
+
+        .c-btn {
+            display: inline-block;
+            overflow: hidden;
+            font-family: inherit;
+            font-weight: 400;
+            text-align: center;
+            vertical-align: middle;
+            outline: 0;
+            border: 0;
+            height: 30px;
+            width: 80px;
+
+2025-04-02 13:24:30     6979    UNKNOW  3       [ERROR] [system]        sylar/iomanager.cpp:257 epoll_ctl(3):2,6,0):-1(2) (No such file or directory)
+2025-04-02 13:24:30     6979    UNKNOW  1       [DEBUG] [system]        sylar/fiber.cpp:114      Fiber::~Fiber id= 3 total= 3
+2025-04-02 13:24:30     6979    UNKNOW  2       [INFO]  [system]        sylar/iomanager.cpp:327 name= idle stopping exit
+2025-04-02 13:24:30     6979    UNKNOW  1       [INFO]  [system]        sylar/scheduler.cpp:238 idle fiber term
+2025-04-02 13:24:30     6979    UNKNOW  1       [DEBUG] [system]        sylar/fiber.cpp:114      Fiber::~Fiber id= 2 total= 2
+2025-04-02 13:24:30     6979    UNKNOW  0       [DEBUG] [system]        sylar/fiber.cpp:114      Fiber::~Fiber id= 1 total= 1
+2025-04-02 13:24:30     6979    UNKNOW  0       [DEBUG] [system]        sylar/fiber.cpp:114      Fiber::~Fiber id= 0 total= 0
 

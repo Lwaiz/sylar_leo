@@ -17,8 +17,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <boost/noncopyable.hpp>
-//#include <openssl/err.h>
-//#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/ssl.h>
 #include "address.h"
 #include "noncopyable.h"
 
@@ -297,6 +297,44 @@ protected:
 
 };
 
+class SSLSocket : public Socket {
+public:
+    typedef std::shared_ptr<SSLSocket> ptr;
+
+    static SSLSocket::ptr CreateTCP(sylar::Address::ptr address);
+    static SSLSocket::ptr CreateTCPSocket();
+    static SSLSocket::ptr CreateTCPSocket6();
+
+    SSLSocket(int family, int type, int protocol = 0);
+    virtual Socket::ptr accept() override;
+    virtual bool bind(const Address::ptr addr) override;
+    virtual bool connect(const Address::ptr addr, uint64_t timeout_ms = -1) override;
+    virtual bool listen(int backlog = SOMAXCONN) override;
+    virtual bool close() override;
+    virtual int send(const void* buffer, size_t length, int flags = 0) override;
+    virtual int send(const iovec* buffers, size_t length, int flags = 0) override;
+    virtual int sendTo(const void* buffer, size_t length, const Address::ptr to, int flags = 0) override;
+    virtual int sendTo(const iovec* buffers, size_t length, const Address::ptr to, int flags = 0) override;
+    virtual int recv(void* buffer, size_t length, int flags = 0) override;
+    virtual int recv(iovec* buffers, size_t length, int flags = 0) override;
+    virtual int recvFrom(void* buffer, size_t length, Address::ptr from, int flags = 0) override;
+    virtual int recvFrom(iovec* buffers, size_t length, Address::ptr from, int flags = 0) override;
+
+    bool loadCertificates(const std::string& cert_file, const std::string& key_file);
+    virtual std::ostream& dump(std::ostream& os) const override;
+protected:
+    virtual bool init(int sock) override;
+private:
+    std::shared_ptr<SSL_CTX> m_ctx;
+    std::shared_ptr<SSL> m_ssl;
+};
+
+/**
+* @brief 流式输出socket
+* @param[in, out] os 输出流
+* @param[in] sock Socket类
+*/
+std::ostream& operator<<(std::ostream& os, const Socket& sock);
 
 
 
