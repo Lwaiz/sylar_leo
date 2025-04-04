@@ -11,6 +11,7 @@
     - https://chatgpt.com/
 - 相关知识点笔记
     - https://github.com/Lwaiz/sylar_leo/blob/master/Sylar_note.md
+    - https://www.processon.com/diagraming/6451f8c0def66d6857979eeb Http模块图
 
 
 - 学习进度
